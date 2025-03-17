@@ -4,12 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/joho/godotenv"
 )
 
@@ -28,15 +32,124 @@ type AddModelRequest struct {
 	Model string `json:"model"`
 }
 
+// JWT claims structure
+type JWTClaims struct {
+	jwt.StandardClaims
+}
+
+// Authentication request structure
+type AuthRequest struct {
+	APIKey string `json:"api_key"`
+}
+
+// Authentication response structure
+type AuthResponse struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// Generate a JWT token with specified expiration time
+func generateToken(expirationTime time.Time) (string, error) {
+	claims := &JWTClaims{
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+
+	return tokenString, err
+}
+
+// JWT authentication middleware
+func jwtMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Get token from Authorization header
+		authHeader := c.Get("Authorization")
+		if authHeader == "" {
+			return c.Status(401).JSON(fiber.Map{"error": "Authorization header is required"})
+		}
+
+		// Check if the header has the "Bearer " prefix
+		headerParts := strings.Split(authHeader, " ")
+		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+			return c.Status(401).JSON(fiber.Map{"error": "Invalid authorization header format"})
+		}
+
+		tokenString := headerParts[1]
+
+		// Parse and validate the token
+		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
+
+		if err != nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Invalid or expired token"})
+		}
+
+		if _, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+			return c.Next()
+		}
+
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid token"})
+	}
+}
+
 func main() {
 	// Create a new Fiber server
 	app := fiber.New()
 
-	/* Route Handling */
+	// Authentication endpoint
+	app.Post("/auth", func(c *fiber.Ctx) error {
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
+		}
+
+		// Get API key from .env
+		expectedAPIKey := os.Getenv("API_KEY")
+		if expectedAPIKey == "" {
+			return c.Status(500).JSON(fiber.Map{"error": "API_KEY is not set in the .env file"})
+		}
+
+		// Get JWT secret key from .env
+		jwtSecret := os.Getenv("JWT_SECRET")
+		if jwtSecret == "" {
+			return c.Status(500).JSON(fiber.Map{"error": "JWT_SECRET is not set in the .env file"})
+		}
+
+		// Parse the request body
+		var req AuthRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Error parsing request body"})
+		}
+
+		// Validate API key
+		if req.APIKey != expectedAPIKey {
+			return c.Status(401).JSON(fiber.Map{"error": "Invalid API key"})
+		}
+
+		// Generate JWT token valid for 24 hours
+		expirationTime := time.Now().Add(24 * time.Hour)
+		tokenString, err := generateToken(expirationTime)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Error generating token"})
+		}
+
+		// Return the token and expiration time
+		return c.JSON(AuthResponse{
+			Token:     tokenString,
+			ExpiresAt: expirationTime,
+		})
+	})
 
 	// GET /list-models
 	// List all models available locally on Ollama
-	app.Get("/list-models", func(c *fiber.Ctx) error {
+	app.Get("/list-models", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -88,7 +201,7 @@ func main() {
 
 	// GET /generate
 	// Generate a awnser from a model and prompt
-	app.Post("/generate", func(c *fiber.Ctx) error {
+	app.Post("/generate", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -155,7 +268,7 @@ func main() {
 
 	// POST /generate-streaming
 	// Generate an answer from a model and prompt with a streaming response
-	app.Post("/generate-streaming", func(c *fiber.Ctx) error {
+	app.Post("/generate-streaming", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -212,7 +325,7 @@ func main() {
 
 	// POST /add-model
 	// Pull a model from the Ollama library
-	app.Post("/add-model", func(c *fiber.Ctx) error {
+	app.Post("/add-model", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
