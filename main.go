@@ -34,6 +34,7 @@ type AddModelRequest struct {
 
 // JWT claims structure
 type JWTClaims struct {
+	Role string `json:"role"`
 	jwt.StandardClaims
 }
 
@@ -48,9 +49,10 @@ type AuthResponse struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
-// Generate a JWT token with specified expiration time
-func generateToken(expirationTime time.Time) (string, error) {
+// Generate a JWT token with specified expiration time and role
+func generateToken(expirationTime time.Time, role string) (string, error) {
 	claims := &JWTClaims{
+		Role: role,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -91,11 +93,26 @@ func jwtMiddleware() fiber.Handler {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid or expired token"})
 		}
 
-		if _, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+		if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
+			// Store user role in context for later use
+			c.Locals("role", claims.Role)
 			return c.Next()
 		}
 
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid token"})
+	}
+}
+
+// Admin-only middleware
+func adminMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Check if the user has admin role
+		role := c.Locals("role")
+		if role != "admin" {
+			return c.Status(403).JSON(fiber.Map{"error": "Admin access required"})
+		}
+
+		return c.Next()
 	}
 }
 
@@ -110,10 +127,12 @@ func main() {
 			log.Println("Warning: Error loading .env file")
 		}
 
-		// Get API key from .env
-		expectedAPIKey := os.Getenv("API_KEY")
-		if expectedAPIKey == "" {
-			return c.Status(500).JSON(fiber.Map{"error": "API_KEY is not set in the .env file"})
+		// Get API keys from .env
+		normalAPIKey := os.Getenv("API_KEY")
+		adminAPIKey := os.Getenv("ADMIN_API_KEY")
+
+		if normalAPIKey == "" || adminAPIKey == "" {
+			return c.Status(500).JSON(fiber.Map{"error": "API keys are not properly set in the .env file"})
 		}
 
 		// Get JWT secret key from .env
@@ -128,22 +147,28 @@ func main() {
 			return c.Status(400).JSON(fiber.Map{"error": "Error parsing request body"})
 		}
 
-		// Validate API key
-		if req.APIKey != expectedAPIKey {
+		// Determine role based on API key
+		var role string
+		if req.APIKey == adminAPIKey {
+			role = "admin"
+		} else if req.APIKey == normalAPIKey {
+			role = "user"
+		} else {
 			return c.Status(401).JSON(fiber.Map{"error": "Invalid API key"})
 		}
 
 		// Generate JWT token valid for 24 hours
 		expirationTime := time.Now().Add(24 * time.Hour)
-		tokenString, err := generateToken(expirationTime)
+		tokenString, err := generateToken(expirationTime, role)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Error generating token"})
 		}
 
-		// Return the token and expiration time
-		return c.JSON(AuthResponse{
-			Token:     tokenString,
-			ExpiresAt: expirationTime,
+		// Return the token, role, and expiration time
+		return c.JSON(fiber.Map{
+			"token":      tokenString,
+			"role":       role,
+			"expires_at": expirationTime,
 		})
 	})
 
@@ -321,7 +346,7 @@ func main() {
 
 	// POST /add-model
 	// Pull a model from the Ollama library
-	app.Post("/add-model", jwtMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("/add-model", jwtMiddleware(), adminMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
