@@ -32,6 +32,11 @@ type AddModelRequest struct {
 	Model string `json:"model"`
 }
 
+// DeleteModelRequest structure
+type DeleteModelRequest struct {
+	Model string `json:"model"`
+}
+
 // JWT claims structure
 type JWTClaims struct {
 	Role string `json:"role"`
@@ -407,6 +412,67 @@ func main() {
 
 		// Return appropriate status code with the error from Ollama
 		return c.Status(resp.StatusCode).JSON(apiResp)
+	})
+
+	// DELETE /delete-model
+	// Delete a model from Ollama
+	app.Delete("/delete-model", jwtMiddleware(), adminMiddleware(), func(c *fiber.Ctx) error {
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
+		}
+
+		// Get the Ollama URL from the .env file
+		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
+
+		// Parse the request body into a DeleteModelRequest structure
+		var req DeleteModelRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).SendString("Error parsing request body")
+		}
+
+		// Ensure the model field is provided
+		if req.Model == "" {
+			return c.Status(400).SendString("Model name is required")
+		}
+
+		// Create the request payload for the Ollama API
+		ollamaReq := map[string]interface{}{
+			"model": req.Model,
+		}
+
+		// Marshal the payload into JSON
+		reqBytes, err := json.Marshal(ollamaReq)
+		if err != nil {
+			return c.Status(500).SendString("Error creating request")
+		}
+
+		// Create a DELETE request to the Ollama API
+		client := &http.Client{}
+		request, err := http.NewRequest("DELETE", url+"/api/delete", bytes.NewBuffer(reqBytes))
+		if err != nil {
+			return c.Status(500).SendString("Error creating DELETE request")
+		}
+		request.Header.Set("Content-Type", "application/json")
+
+		// Send the request
+		resp, err := client.Do(request)
+		if err != nil {
+			return c.Status(500).SendString("Error contacting Ollama: " + err.Error())
+		}
+		defer resp.Body.Close()
+
+		// Pass through the status code from Ollama
+		if resp.StatusCode != 200 {
+			body, _ := io.ReadAll(resp.Body)
+			return c.Status(resp.StatusCode).SendString("Error from Ollama API: " + string(body))
+		}
+
+		// Successful deletion
+		return c.JSON(fiber.Map{"status": "success", "message": "Model deleted successfully"})
 	})
 
 	log.Fatal(app.Listen(":3000"))
