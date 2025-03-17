@@ -1,0 +1,212 @@
+{
+	"info": {
+		"_postman_id": "33784376-fba9-4435-a0d7-574f090df0fe",
+		"name": "zllm API Endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "16973229"
+	},
+	"item": [
+		{
+			"name": "Generate",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"prompt\": \"Hello, Fiber!\",\r\n    \"model\": \"gemma3:1b\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{OLLAMA_URL}}/generate",
+					"host": [
+						"{{OLLAMA_URL}}"
+					],
+					"path": [
+						"generate"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Streaming",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"prompt\": \"Hello, Fiber!\", \"model\": \"gemma3:1b\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/generate-streaming",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"generate-streaming"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add model",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"model\": \"qwen2.5:0.5b\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{OLLAMA_URL}}/add-model",
+					"host": [
+						"{{OLLAMA_URL}}"
+					],
+					"path": [
+						"add-model"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List Models",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{OLLAMA_URL}}/list-models",
+					"host": [
+						"{{OLLAMA_URL}}"
+					],
+					"path": [
+						"list-models"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse response as JSON\r",
+							"let responseJson = pm.response.json();\r",
+							"\r",
+							"// Check if 'token' exists in the response\r",
+							"if (responseJson.token) {\r",
+							"    // Set the 'token' variable in the 'Dev' environment\r",
+							"    pm.environment.set(\"token\", responseJson.token);\r",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    // \"api_key\": \"{{API_KEY}}\",\r\n    \"api_key\": \"{{ADMIN_API_KEY}}\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{OLLAMA_URL}}/auth",
+					"host": [
+						"{{OLLAMA_URL}}"
+					],
+					"path": [
+						"auth"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
