@@ -130,45 +130,69 @@ func main() {
 		return c.JSON(fiber.Map{"response": string(body)})
 	})
 
-	// GET /pull
+	// POST /add-model
 	// Pull a model from the Ollama library
 	app.Post("/add-model", func(c *fiber.Ctx) error {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatal("Error loading .env file")
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
 		}
 
+		// Get the Ollama URL from the .env file
 		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
 
+		// Parse the request body into an AddModelRequest structure
 		var req AddModelRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).SendString("Error parsing request body")
 		}
 
+		// Ensure the model field is provided
 		if req.Model == "" {
 			return c.Status(400).SendString("Model is required")
 		}
 
-		fmt.Println("Model: ", req.Model)
-
-		ollamaReq := map[string]string{
-			"model": req.Model,
+		// Create the request payload for the Ollama API including stream=false
+		ollamaReq := map[string]interface{}{
+			"model":  req.Model,
+			"stream": false,
 		}
 
+		// Marshal the payload into JSON
 		reqBytes, err := json.Marshal(ollamaReq)
 		if err != nil {
 			return c.Status(500).SendString("Error creating request")
 		}
 
+		// Send a POST request to the Ollama API pull endpoint
 		resp, err := http.Post(url+"/api/pull", "application/json", bytes.NewBuffer(reqBytes))
 		if err != nil {
 			return c.Status(500).SendString("Error contacting Ollama")
 		}
-
 		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body)
 
-		return c.JSON(fiber.Map{"response": string(body)})
+		// Read the response body from Ollama
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return c.Status(500).SendString("Error reading response body")
+		}
+
+		// Parse the JSON response from Ollama
+		var apiResp map[string]interface{}
+		if err := json.Unmarshal(body, &apiResp); err != nil {
+			return c.Status(500).SendString("Error parsing Ollama response")
+		}
+
+		// Only return a 200 if the status is "success"
+		if status, ok := apiResp["status"].(string); ok && status == "success" {
+			return c.Status(200).JSON(fiber.Map{"status": "success"})
+		}
+
+		// Return appropriate status code with the error from Ollama
+		return c.Status(resp.StatusCode).JSON(apiResp)
 	})
 
 	log.Fatal(app.Listen(":3000"))
