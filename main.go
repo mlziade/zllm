@@ -256,10 +256,6 @@ func main() {
 			return c.Status(500).SendString("Error parsing Ollama response")
 		}
 
-		for key, value := range apiResp {
-			log.Println(key, value)
-		}
-
 		return c.JSON(fiber.Map{
 			"model":    req.Model,
 			"response": apiResp["response"],
