@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -87,47 +86,70 @@ func main() {
 	})
 
 	// GET /generate
-	// Generate a awnser from a model
-	// TODO: Add streaming support
+	// Generate a awnser from a model and prompt
 	app.Post("/generate", func(c *fiber.Ctx) error {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatal("Error loading .env file")
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
 		}
 
+		// Get the Ollama URL from the .env file
 		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
 
+		// Parse the request body into an GenerateRequest structure
 		var req GenerateRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).SendString("Error parsing request body")
 		}
 
+		// Ensure the prompt and model fields are provided
 		if req.Prompt == "" || req.Model == "" {
 			return c.Status(400).SendString("Prompt and model are required")
 		}
 
-		fmt.Println("Prompt: ", req.Prompt)
-		fmt.Println("Model: ", req.Model)
-
-		ollamaReq := map[string]string{
+		// Create the request payload for the Ollama API
+		ollamaReq := map[string]interface{}{
 			"model":  req.Model,
 			"prompt": req.Prompt,
+			"stream": false,
 		}
 
+		// Marshal the payload into JSON
 		reqBytes, err := json.Marshal(ollamaReq)
 		if err != nil {
 			return c.Status(500).SendString("Error creating request")
 		}
 
+		// Send a POST request to the Ollama API generate endpoint
 		resp, err := http.Post(url+"/api/generate", "application/json", bytes.NewBuffer(reqBytes))
 		if err != nil {
 			return c.Status(500).SendString("Error contacting Ollama")
 		}
-
 		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body)
 
-		return c.JSON(fiber.Map{"response": string(body)})
+		// Read the response body from Ollama
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return c.Status(500).SendString("Error reading response body")
+		}
+
+		// Parse the JSON response from Ollama
+		var apiResp map[string]interface{}
+		if err := json.Unmarshal(body, &apiResp); err != nil {
+			return c.Status(500).SendString("Error parsing Ollama response")
+		}
+
+		for key, value := range apiResp {
+			log.Println(key, value)
+		}
+
+		return c.JSON(fiber.Map{
+			"model":    req.Model,
+			"response": apiResp["response"],
+		})
 	})
 
 	// POST /add-model
