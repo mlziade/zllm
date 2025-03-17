@@ -7,8 +7,10 @@ import (
     "io/ioutil"
     "log"
     "net/http"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
 )
 
 /* Ollama Server API endpoints
@@ -35,8 +37,12 @@ func main() {
 	// GET /list-models
 	// List all models available locally on Ollama
 	app.Get("/list-models", func(c *fiber.Ctx) error {
-		// url := os.Getenv("OLLAMA_URL")
-		url := "http://127.0.0.1:11435"
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
+
+		url := os.Getenv("OLLAMA_URL")
 
 		resp, err := http.Get(url+"/api/tags")
 		if err != nil {
@@ -53,8 +59,12 @@ func main() {
 	// Generate a awnser from a model
 	// TODO: Add streaming support
 	app.Post("/generate", func(c *fiber.Ctx) error {
-		// url := os.Getenv("OLLAMA_URL")
-		url := "http://127.0.0.1:11435"
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
+
+		url := os.Getenv("OLLAMA_URL")
 
 		var req GenerateRequest
         if err := c.BodyParser(&req); err != nil {
@@ -92,8 +102,12 @@ func main() {
 	// GET /pull
 	// Pull a model from the Ollama library
 	app.Post("/add-model", func(c *fiber.Ctx) error {
-		// url := os.Getenv("OLLAMA_URL")
-		url := "http://127.0.0.1:11435"
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
+		
+		url := os.Getenv("OLLAMA_URL")
 
 		var req AddModelRequest
         if err := c.BodyParser(&req); err != nil {
