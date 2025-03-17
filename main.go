@@ -2,11 +2,11 @@ package main
 
 import (
 	"bytes"
-    "encoding/json"
-    "fmt"
-    "io/ioutil"
-    "log"
-    "net/http"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -20,8 +20,8 @@ import (
  */
 
 type GenerateRequest struct {
-    Model  string `json:"model"`
-    Prompt string `json:"prompt"`
+	Model  string `json:"model"`
+	Prompt string `json:"prompt"`
 }
 
 type AddModelRequest struct {
@@ -44,13 +44,13 @@ func main() {
 
 		url := os.Getenv("OLLAMA_URL")
 
-		resp, err := http.Get(url+"/api/tags")
+		resp, err := http.Get(url + "/api/tags")
 		if err != nil {
 			return c.Status(500).SendString("Error contacting Ollama")
 		}
 
 		defer resp.Body.Close()
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 
 		return c.JSON(fiber.Map{"response": string(body)})
 	})
@@ -67,34 +67,34 @@ func main() {
 		url := os.Getenv("OLLAMA_URL")
 
 		var req GenerateRequest
-        if err := c.BodyParser(&req); err != nil {
-            return c.Status(400).SendString("Error parsing request body")
-        }
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).SendString("Error parsing request body")
+		}
 
-        if req.Prompt == "" || req.Model == "" {
-            return c.Status(400).SendString("Prompt and model are required")
-        }
+		if req.Prompt == "" || req.Model == "" {
+			return c.Status(400).SendString("Prompt and model are required")
+		}
 
 		fmt.Println("Prompt: ", req.Prompt)
 		fmt.Println("Model: ", req.Model)
 
 		ollamaReq := map[string]string{
-            "model":  req.Model,
-            "prompt": req.Prompt,
-        }
+			"model":  req.Model,
+			"prompt": req.Prompt,
+		}
 
 		reqBytes, err := json.Marshal(ollamaReq)
-        if err != nil {
-            return c.Status(500).SendString("Error creating request")
-        }
-        
-        resp, err := http.Post(url+"/api/generate", "application/json", bytes.NewBuffer(reqBytes))
-        if err != nil {
-            return c.Status(500).SendString("Error contacting Ollama")
-        }
+		if err != nil {
+			return c.Status(500).SendString("Error creating request")
+		}
+
+		resp, err := http.Post(url+"/api/generate", "application/json", bytes.NewBuffer(reqBytes))
+		if err != nil {
+			return c.Status(500).SendString("Error contacting Ollama")
+		}
 
 		defer resp.Body.Close()
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 
 		return c.JSON(fiber.Map{"response": string(body)})
 	})
@@ -106,36 +106,36 @@ func main() {
 		if err != nil {
 			log.Fatal("Error loading .env file")
 		}
-		
+
 		url := os.Getenv("OLLAMA_URL")
 
 		var req AddModelRequest
-        if err := c.BodyParser(&req); err != nil {
-            return c.Status(400).SendString("Error parsing request body")
-        }
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).SendString("Error parsing request body")
+		}
 
-        if req.Model == "" {
-            return c.Status(400).SendString("Model is required")
-        }
+		if req.Model == "" {
+			return c.Status(400).SendString("Model is required")
+		}
 
 		fmt.Println("Model: ", req.Model)
 
 		ollamaReq := map[string]string{
-            "model":  req.Model,
-        }
+			"model": req.Model,
+		}
 
 		reqBytes, err := json.Marshal(ollamaReq)
-        if err != nil {
-            return c.Status(500).SendString("Error creating request")
-        }
-        
-        resp, err := http.Post(url+"/api/pull", "application/json", bytes.NewBuffer(reqBytes))
-        if err != nil {
-            return c.Status(500).SendString("Error contacting Ollama")
-        }
+		if err != nil {
+			return c.Status(500).SendString("Error creating request")
+		}
+
+		resp, err := http.Post(url+"/api/pull", "application/json", bytes.NewBuffer(reqBytes))
+		if err != nil {
+			return c.Status(500).SendString("Error contacting Ollama")
+		}
 
 		defer resp.Body.Close()
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 
 		return c.JSON(fiber.Map{"response": string(body)})
 	})
