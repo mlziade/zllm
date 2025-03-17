@@ -37,22 +37,53 @@ func main() {
 	// GET /list-models
 	// List all models available locally on Ollama
 	app.Get("/list-models", func(c *fiber.Ctx) error {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatal("Error loading .env file")
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
 		}
 
+		// Get the Ollama URL from the .env file
 		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
 
+		// Make a GET request to the Ollama API
 		resp, err := http.Get(url + "/api/tags")
 		if err != nil {
-			return c.Status(500).SendString("Error contacting Ollama")
+			return c.Status(500).SendString("Error contacting Ollama: " + err.Error())
+		}
+		defer resp.Body.Close()
+
+		// Read response body
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return c.Status(500).SendString("Error reading response body")
 		}
 
-		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body)
+		// Parse the JSON response
+		var responseJson map[string]interface{}
+		if err := json.Unmarshal(body, &responseJson); err != nil {
+			return c.Status(500).SendString("Error parsing JSON response: " + err.Error())
+		}
 
-		return c.JSON(fiber.Map{"response": string(body)})
+		// Extract model names from the response
+		models, ok := responseJson["models"].([]interface{})
+		if !ok {
+			return c.Status(500).SendString("Invalid JSON format: 'models' field missing or incorrect")
+		}
+
+		availableModels := []string{}
+		for _, model := range models {
+			if modelMap, ok := model.(map[string]interface{}); ok {
+				if name, exists := modelMap["name"].(string); exists {
+					availableModels = append(availableModels, name)
+				}
+			}
+		}
+
+		// Return the formatted response
+		return c.JSON(fiber.Map{"models": availableModels})
 	})
 
 	// GET /generate
