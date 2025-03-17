@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"io"
@@ -150,6 +151,63 @@ func main() {
 			"model":    req.Model,
 			"response": apiResp["response"],
 		})
+	})
+
+	// POST /generate-streaming
+	// Generate an answer from a model and prompt with a streaming response
+	app.Post("/generate-streaming", func(c *fiber.Ctx) error {
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
+		}
+
+		// Get the Ollama URL from the .env file
+		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
+
+		// Parse the request body into a GenerateRequest structure
+		var req GenerateRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).SendString("Error parsing request body")
+		}
+
+		// Ensure the prompt and model fields are provided
+		if req.Prompt == "" || req.Model == "" {
+			return c.Status(400).SendString("Prompt and model are required")
+		}
+
+		// Create the request payload for the Ollama API with streaming enabled
+		ollamaReq := map[string]interface{}{
+			"model":  req.Model,
+			"prompt": req.Prompt,
+			"stream": true,
+		}
+
+		// Marshal the payload into JSON
+		reqBytes, err := json.Marshal(ollamaReq)
+		if err != nil {
+			return c.Status(500).SendString("Error creating request")
+		}
+
+		// Send a POST request to the Ollama API generate endpoint
+		resp, err := http.Post(url+"/api/generate", "application/json", bytes.NewBuffer(reqBytes))
+		if err != nil {
+			return c.Status(500).SendString("Error contacting Ollama")
+		}
+
+		// Set the response header content type
+		c.Set("Content-Type", "application/json")
+
+		// Stream the response from Ollama to the client
+		c.Set("Content-Type", "application/json")
+		c.Response().SetBodyStreamWriter(func(w *bufio.Writer) {
+			defer resp.Body.Close()
+			io.Copy(w, resp.Body)
+			w.Flush()
+		})
+		return nil
 	})
 
 	// POST /add-model
