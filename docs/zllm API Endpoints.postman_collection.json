@@ -28,7 +28,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"prompt\": \"Hello, Fiber!\",\r\n    \"model\": \"gemma3:1b\"\r\n}",
+					"raw": "{\r\n    \"prompt\": \"Hello!\",\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -36,9 +36,9 @@
 					}
 				},
 				"url": {
-					"raw": "{{OLLAMA_URL}}/generate",
+					"raw": "{{SERVER_URL}}/generate",
 					"host": [
-						"{{OLLAMA_URL}}"
+						"{{SERVER_URL}}"
 					],
 					"path": [
 						"generate"
@@ -69,7 +69,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\"prompt\": \"Hello, Fiber!\", \"model\": \"gemma3:1b\"}",
+					"raw": "{\r\n    \"prompt\": \"Hello, Fiber!\",\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -77,12 +77,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://localhost:3000/generate-streaming",
-					"protocol": "http",
+					"raw": "{{SERVER_URL}}/generate-streaming",
 					"host": [
-						"localhost"
+						"{{SERVER_URL}}"
 					],
-					"port": "3000",
 					"path": [
 						"generate-streaming"
 					]
@@ -112,7 +110,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"model\": \"qwen2.5:0.5b\"\r\n}",
+					"raw": "{\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -120,9 +118,9 @@
 					}
 				},
 				"url": {
-					"raw": "{{OLLAMA_URL}}/add-model",
+					"raw": "{{SERVER_URL}}/add-model",
 					"host": [
-						"{{OLLAMA_URL}}"
+						"{{SERVER_URL}}"
 					],
 					"path": [
 						"add-model"
@@ -152,9 +150,9 @@
 					}
 				],
 				"url": {
-					"raw": "{{OLLAMA_URL}}/list-models",
+					"raw": "{{SERVER_URL}}/list-models",
 					"host": [
-						"{{OLLAMA_URL}}"
+						"{{SERVER_URL}}"
 					],
 					"path": [
 						"list-models"
@@ -197,9 +195,9 @@
 					}
 				},
 				"url": {
-					"raw": "{{OLLAMA_URL}}/auth",
+					"raw": "{{SERVER_URL}}/auth",
 					"host": [
-						"{{OLLAMA_URL}}"
+						"{{SERVER_URL}}"
 					],
 					"path": [
 						"auth"
