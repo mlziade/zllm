@@ -533,9 +533,10 @@ func main() {
 		// Run Tesseract OCR on the file
 		cmd := exec.Command(
 			"tesseract",
-			filePath, "stdout", "txt",
-			"--oem", "1", // Use LSTM OCR Engine
+			filePath,
+			"stdout",
 			"-l", tesseractLang, // Use language from user's request
+			"--oem", "1", // Use LSTM OCR Engine
 			"--dpi", "300", // Assume 300 DPI for better accuracy
 			"--psm", "3", // Auto-page segmentation with OSD
 		)
