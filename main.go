@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -473,6 +474,68 @@ func main() {
 
 		// Successful deletion
 		return c.JSON(fiber.Map{"status": "success", "message": "Model deleted successfully"})
+	})
+
+	app.Post("/ocr/extract", jwtMiddleware(), func(c *fiber.Ctx) error {
+		// Get the image file from the request
+		file, err := c.FormFile("file")
+		if err != nil {
+			return c.Status(400).SendString("Error parsing file")
+		}
+
+		// Validate file extension (only allow .png, .jpg, .jpeg)
+		filename := strings.ToLower(file.Filename)
+		isValidExtension := false
+		allowedExtensions := []string{".png", ".jpg", ".jpeg"}
+		for _, ext := range allowedExtensions {
+			if strings.HasSuffix(filename, ext) {
+				isValidExtension = true
+				break
+			}
+		}
+
+		if !isValidExtension {
+			return c.Status(400).SendString("Unsupported file type. Only .png, .jpg, and .jpeg images are supported")
+		}
+
+		// Create uploads directory if it doesn't exist
+		uploadsDir := "./uploads"
+		if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+				return c.Status(500).SendString("Error creating uploads directory")
+			}
+		}
+
+		// Save the file to the uploads directory
+		filePath := fmt.Sprintf("%s/%s", uploadsDir, file.Filename)
+		if err := c.SaveFile(file, filePath); err != nil {
+			return c.Status(500).SendString("Error saving file: " + err.Error())
+		}
+
+		// Run Tesseract OCR on the file
+		cmd := exec.Command(
+			"tesseract",
+			filePath, "stdout", "txt",
+			"--oem", "1", // Use LSTM OCR Engine
+			"-l", "eng", // English language
+			"--dpi", "300", // Assume 300 DPI for better accuracy
+			"--psm", "3", // Auto-page segmentation with OSD
+		)
+
+		// Capture both stdout and stderr for better error diagnostics
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return c.Status(500).SendString("Error running Tesseract OCR: " + err.Error())
+		}
+
+		// Clean up temporary file after processing
+		defer os.Remove(filePath)
+
+		// Return extracted text
+		return c.JSON(fiber.Map{
+			"text":           strings.TrimSpace(string(out)),
+			"file_processed": file.Filename,
+		})
 	})
 
 	log.Fatal(app.Listen(":3000"))
