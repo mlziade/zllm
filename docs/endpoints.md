@@ -28,7 +28,7 @@ The API uses role-based JWT authentication to secure endpoints.
 3.  Use the token for subsequent requests:
 
     ````json
-    GET /list-models
+    GET /llms/models/list
     Authorization: Bearer eyJhbGciOiJIUzI1...
     ````
 
@@ -42,7 +42,7 @@ API keys should be configured in the `.env` file, refer to the [example env](../
 ### Protected Endpoints
 
 *   All endpoints except `/auth` require a valid JWT token
-*   Admin operations (like `/add-model`) require a token with admin role
+*   Admin operations (like `/llms/models/add`) require a token with admin role
 
 ## Endpoints
 
@@ -70,9 +70,9 @@ Response:
 }
 ````
 
-### Model Management
+### LLM Endpoints
 
-#### **GET /list-models**
+#### **GET /llms/models/list**
 
 Lists all available models on the Ollama instance.
 
@@ -101,7 +101,7 @@ Response:
 }
 ````
 
-#### **POST /add-model** (Admin only)
+#### **POST /llms/models/add** (Admin only)
 
 Pulls a new model from the Ollama library.
 
@@ -131,7 +131,7 @@ Response:
 }
 ````
 
-#### **DELETE /delete-model** (Admin only)
+#### **DELETE /llms/models/delete** (Admin only)
 
 Deletes a model from the Ollama instance.
 
@@ -152,9 +152,7 @@ Response:
 }
 ````
 
-### Text Generation
-
-#### **POST /generate**
+#### **POST /llms/generate**
 
 Generates text from a prompt using a specified model (non-streaming).
 
@@ -191,7 +189,7 @@ Response:
 }
 ````
 
-#### **POST /generate-streaming**
+#### **POST /llms/generate-streaming**
 
 Generates text from a prompt with streaming response.
 
@@ -239,9 +237,9 @@ Response: A stream of JSON objects with partial responses.
 {"response": "", "done": true, "total_duration": 1356000000, "load_duration": 4892000, "prompt_eval_count": 11, "prompt_eval_duration": 42003000, "eval_count": 132, "eval_duration": 1309105000}
 ````
 
-### OCR (Optical Character Recognition)
+### OCR Endpoints
 
-#### **POST /ocr-image**
+#### **POST /ocr/extract/image**
 
 Extracts text from an image using Tesseract OCR.
 
@@ -253,7 +251,7 @@ Request:
 
 Example:
 ```curl
-curl -X POST http://localhost:3000/ocr-image?lang=en \
+curl -X POST http://localhost:3000/ocr/extract/image?lang=en \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1..." \
   -F "file=@/path/to/your/image.jpg"
 ````
@@ -265,3 +263,4 @@ Response:
   "text": "Extracted text from the image appears here.",
   "file_processed": "image.jpg"
 }
+````

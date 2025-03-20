@@ -178,9 +178,9 @@ func main() {
 		})
 	})
 
-	// GET /list-models
+	// GET llms/models/list
 	// List all models available locally on Ollama
-	app.Get("/list-models", jwtMiddleware(), func(c *fiber.Ctx) error {
+	app.Get("/llms/models/list", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -230,9 +230,9 @@ func main() {
 		return c.JSON(fiber.Map{"models": availableModels})
 	})
 
-	// GET /generate
+	// GET llms/generate
 	// Generate a awnser from a model and prompt
-	app.Post("/generate", jwtMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("/llms/generate", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -293,9 +293,9 @@ func main() {
 		})
 	})
 
-	// POST /generate-streaming
+	// POST llms/generate-streaming
 	// Generate an answer from a model and prompt with a streaming response
-	app.Post("/generate-streaming", jwtMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("/llms/generate-streaming", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -350,9 +350,9 @@ func main() {
 		return nil
 	})
 
-	// POST /add-model
+	// POST llms/models/add
 	// Pull a model from the Ollama library
-	app.Post("/add-model", jwtMiddleware(), adminMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("/llms/models/add", jwtMiddleware(), adminMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -415,9 +415,9 @@ func main() {
 		return c.Status(resp.StatusCode).JSON(apiResp)
 	})
 
-	// DELETE /delete-model
+	// DELETE llms/models/delete
 	// Delete a model from Ollama
-	app.Delete("/delete-model", jwtMiddleware(), adminMiddleware(), func(c *fiber.Ctx) error {
+	app.Delete("/llms/models/delete", jwtMiddleware(), adminMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -476,11 +476,11 @@ func main() {
 		return c.JSON(fiber.Map{"status": "success", "message": "Model deleted successfully"})
 	})
 
-	// POST /ocr/extract-image
+	// POST ocr/extract/image
 	// Extract text from an image using Tesseract OCR
 	// Supports .png, .jpg, and .jpeg images
 	// Supports English (en) and Portuguese (pt) languages (defaults to: English)
-	app.Post("/ocr-image", jwtMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("ocr/extract/image", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Get the image file from the request
 		file, err := c.FormFile("file")
 		if err != nil {
