@@ -476,7 +476,11 @@ func main() {
 		return c.JSON(fiber.Map{"status": "success", "message": "Model deleted successfully"})
 	})
 
-	app.Post("/ocr/extract", jwtMiddleware(), func(c *fiber.Ctx) error {
+	// POST /ocr/extract-image
+	// Extract text from an image using Tesseract OCR
+	// Supports .png, .jpg, and .jpeg images
+	// Supports English (en) and Portuguese (pt) languages (defaults to: English)
+	app.Post("/ocr/extract-image", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Get the image file from the request
 		file, err := c.FormFile("file")
 		if err != nil {
@@ -498,6 +502,20 @@ func main() {
 			return c.Status(400).SendString("Unsupported file type. Only .png, .jpg, and .jpeg images are supported")
 		}
 
+		// Get language parameter from query, default to English if not provided
+		lang := c.Query("lang", "en")
+
+		// Validate language parameter
+		var tesseractLang string
+		switch lang {
+		case "en":
+			tesseractLang = "eng"
+		case "pt":
+			tesseractLang = "por"
+		default:
+			tesseractLang = "eng" // Default to English for invalid languages
+		}
+
 		// Create uploads directory if it doesn't exist
 		uploadsDir := "./uploads"
 		if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
@@ -517,7 +535,7 @@ func main() {
 			"tesseract",
 			filePath, "stdout", "txt",
 			"--oem", "1", // Use LSTM OCR Engine
-			"-l", "eng", // English language
+			"-l", tesseractLang, // Use language from user's request
 			"--dpi", "300", // Assume 300 DPI for better accuracy
 			"--psm", "3", // Auto-page segmentation with OSD
 		)
