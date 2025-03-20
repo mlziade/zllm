@@ -28,7 +28,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"prompt\": \"Hello!\",\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
+					"raw": "{\r\n    \"prompt\": \"Wich name from the list below better matches with the following name 'Hunter x Hunter'. [Hunter x Hunter (2011), Hunter x Hunter, Hunter x Hunter Movie 1: Phantom Rouge, Hunter x Hunter Movie 2: The Last Mission]\",\r\n    \"model\": \"qwen2.5:1.5b\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -69,7 +69,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"prompt\": \"Hello, Fiber!\",\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
+					"raw": "{\r\n    \"prompt\": \"Is Harry Potter e a Pedra Filosofal and Harry Potter 3 the same movie? Responde with one of the 3 options: Yes, No, Dont Know\",\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -110,7 +110,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
+					"raw": "{\r\n    \"model\": \"qwen2.5:1.5b\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -124,6 +124,47 @@
 					],
 					"path": [
 						"add-model"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete model",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{SERVER_URL}}/delete-model",
+					"host": [
+						"{{SERVER_URL}}"
+					],
+					"path": [
+						"delete-model"
 					]
 				}
 			},
@@ -187,7 +228,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    // \"api_key\": \"{{API_KEY}}\",\r\n    \"api_key\": \"{{ADMIN_API_KEY}}\"\r\n}",
+					"raw": "{\r\n    \"api_key\": \"{{API_KEY}}\"\r\n    // \"api_key\": \"{{ADMIN_API_KEY}}\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -203,6 +244,55 @@
 						"auth"
 					]
 				}
+			},
+			"response": []
+		},
+		{
+			"name": "OCR Extract Image",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/C:/Users/ziade/OneDrive/Desktop/png_sample - br.png"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{SERVER_URL}}/ocr-image?lang=pt",
+					"host": [
+						"{{SERVER_URL}}"
+					],
+					"path": [
+						"ocr-image"
+					],
+					"query": [
+						{
+							"key": "lang",
+							"value": "pt"
+						}
+					]
+				},
+				"description": "Generated from cURL: curl -X POST \\\r\n  http://localhost:3000/ocr/extract \\\r\n  -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\" \\\r\n  -F \"file=@/path/to/your/image.jpg\""
 			},
 			"response": []
 		}
