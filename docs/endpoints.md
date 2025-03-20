@@ -239,3 +239,29 @@ Response: A stream of JSON objects with partial responses.
 {"response": "", "done": true, "total_duration": 1356000000, "load_duration": 4892000, "prompt_eval_count": 11, "prompt_eval_duration": 42003000, "eval_count": 132, "eval_duration": 1309105000}
 ````
 
+### OCR (Optical Character Recognition)
+
+#### **POST /ocr/extract-image**
+
+Extracts text from an image using Tesseract OCR.
+
+Request:
+- Multipart form data with a file field named "file"
+- Accepts .png, .jpg, and .jpeg image formats 
+- Optional "lang" query parameter (defaults to "en", also supports "pt")
+- Requires JWT authentication header
+
+Example:
+```curl
+curl -X POST http://localhost:3000/ocr/extract-image?lang=en \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1..." \
+  -F "file=@/path/to/your/image.jpg"
+````
+
+Response:
+
+````json
+{
+  "text": "Extracted text from the image appears here.",
+  "file_processed": "image.jpg"
+}

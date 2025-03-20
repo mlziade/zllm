@@ -13,6 +13,7 @@ It uses the Golang framework [Fiber](https://github.com/gofiber/fiber) to integr
 - Golang
 - Fiber
 - Ollama
+- Tesseract
 
 ### Deployment Infrastructure
 
@@ -33,9 +34,9 @@ Refer to the [API documentation](docs/endpoints.md) for detailed information abo
 - ✅ Integration with Ollama for local model execution
 - ✅ Text generation endpoints (streaming and non-streaming)
 - ✅ Model management (list, add)
+- ✅ OCR capabilities for text extraction from images (Tesseract)
 
 ### Future
-- 🚧 OCR capabilities for text extraction from images
 - 🚧 Multimodal models support (text + image inputs)
 - 🚧 Translation endpoint for multiple languages
 - 🚧 Image generation
