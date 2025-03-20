@@ -241,7 +241,7 @@ Response: A stream of JSON objects with partial responses.
 
 ### OCR (Optical Character Recognition)
 
-#### **POST /ocr/extract-image**
+#### **POST /ocr-image**
 
 Extracts text from an image using Tesseract OCR.
 
@@ -253,7 +253,7 @@ Request:
 
 Example:
 ```curl
-curl -X POST http://localhost:3000/ocr/extract-image?lang=en \
+curl -X POST http://localhost:3000/ocr-image?lang=en \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1..." \
   -F "file=@/path/to/your/image.jpg"
 ````

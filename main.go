@@ -480,7 +480,7 @@ func main() {
 	// Extract text from an image using Tesseract OCR
 	// Supports .png, .jpg, and .jpeg images
 	// Supports English (en) and Portuguese (pt) languages (defaults to: English)
-	app.Post("/ocr/extract-image", jwtMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("/ocr-image", jwtMiddleware(), func(c *fiber.Ctx) error {
 		// Get the image file from the request
 		file, err := c.FormFile("file")
 		if err != nil {
