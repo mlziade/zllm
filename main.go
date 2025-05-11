@@ -2,19 +2,12 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/joho/godotenv"
 )
 
@@ -23,112 +16,6 @@ import (
  * https://github.com/ollama/ollama/blob/main/docs/api.md
  *
  */
-
-type MultimodalModel string
-
-const (
-	Gemma3   MultimodalModel = "gemma3:4b"
-	Llava7   MultimodalModel = "llava:7b"
-	MiniCPMv MultimodalModel = "minicpm-v:8b"
-)
-
-type GenerateRequest struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
-}
-
-type AddModelRequest struct {
-	Model string `json:"model"`
-}
-
-// DeleteModelRequest structure
-type DeleteModelRequest struct {
-	Model string `json:"model"`
-}
-
-// JWT claims structure
-type JWTClaims struct {
-	Role string `json:"role"`
-	jwt.StandardClaims
-}
-
-// Authentication request structure
-type AuthRequest struct {
-	APIKey string `json:"api_key"`
-}
-
-// Authentication response structure
-type AuthResponse struct {
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expires_at"`
-}
-
-// Generate a JWT token with specified expiration time and role
-func generateToken(expirationTime time.Time, role string) (string, error) {
-	claims := &JWTClaims{
-		Role: role,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
-
-	return tokenString, err
-}
-
-// JWT authentication middleware
-func jwtMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		// Get token from Authorization header
-		authHeader := c.Get("Authorization")
-		if authHeader == "" {
-			return c.Status(401).JSON(fiber.Map{"error": "Authorization header is required"})
-		}
-
-		// Check if the header has the "Bearer " prefix
-		headerParts := strings.Split(authHeader, " ")
-		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
-			return c.Status(401).JSON(fiber.Map{"error": "Invalid authorization header format"})
-		}
-
-		tokenString := headerParts[1]
-
-		// Parse and validate the token
-		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			return []byte(os.Getenv("JWT_SECRET")), nil
-		})
-
-		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "Invalid or expired token"})
-		}
-
-		if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
-			// Store user role in context for later use
-			c.Locals("role", claims.Role)
-			return c.Next()
-		}
-
-		return c.Status(401).JSON(fiber.Map{"error": "Invalid token"})
-	}
-}
-
-// Admin-only middleware
-func adminMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		// Check if the user has admin role
-		role := c.Locals("role")
-		if role != "admin" {
-			return c.Status(403).JSON(fiber.Map{"error": "Admin access required"})
-		}
-
-		return c.Next()
-	}
-}
 
 func main() {
 	// Create a new Fiber server
@@ -161,21 +48,10 @@ func main() {
 			return c.Status(400).JSON(fiber.Map{"error": "Error parsing request body"})
 		}
 
-		// Determine role based on API key
-		var role string
-		if req.APIKey == adminAPIKey {
-			role = "admin"
-		} else if req.APIKey == normalAPIKey {
-			role = "user"
-		} else {
-			return c.Status(401).JSON(fiber.Map{"error": "Invalid API key"})
-		}
-
-		// Generate JWT token valid for 24 hours
-		expirationTime := time.Now().Add(24 * time.Hour)
-		tokenString, err := generateToken(expirationTime, role)
+		// Process the authentication request
+		tokenString, role, expirationTime, err := HandleAuthentication(normalAPIKey, adminAPIKey, jwtSecret, req)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Error generating token"})
+			return c.Status(401).JSON(fiber.Map{"error": err.Error()})
 		}
 
 		// Return the token, role, and expiration time
@@ -188,7 +64,7 @@ func main() {
 
 	// GET llms/models/list
 	// List all models available locally on Ollama
-	app.Get("/llms/models/list", jwtMiddleware(), func(c *fiber.Ctx) error {
+	app.Get("/llms/models/list", JWTMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -200,47 +76,19 @@ func main() {
 			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
 		}
 
-		// Make a GET request to the Ollama API
-		resp, err := http.Get(url + "/api/tags")
+		// Get the list of models from Ollama
+		models, err := ListModels(url)
 		if err != nil {
-			return c.Status(500).SendString("Error contacting Ollama: " + err.Error())
-		}
-		defer resp.Body.Close()
-
-		// Read response body
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return c.Status(500).SendString("Error reading response body")
-		}
-
-		// Parse the JSON response
-		var responseJson map[string]interface{}
-		if err := json.Unmarshal(body, &responseJson); err != nil {
-			return c.Status(500).SendString("Error parsing JSON response: " + err.Error())
-		}
-
-		// Extract model names from the response
-		models, ok := responseJson["models"].([]interface{})
-		if !ok {
-			return c.Status(500).SendString("Invalid JSON format: 'models' field missing or incorrect")
-		}
-
-		availableModels := []string{}
-		for _, model := range models {
-			if modelMap, ok := model.(map[string]interface{}); ok {
-				if name, exists := modelMap["name"].(string); exists {
-					availableModels = append(availableModels, name)
-				}
-			}
+			return c.Status(500).SendString(err.Error())
 		}
 
 		// Return the formatted response
-		return c.JSON(fiber.Map{"models": availableModels})
+		return c.JSON(fiber.Map{"models": models})
 	})
 
-	// GET llms/generate
-	// Generate a awnser from a model and prompt
-	app.Post("/llms/generate", jwtMiddleware(), func(c *fiber.Ctx) error {
+	// POST llms/generate
+	// Generate a answer from a model and prompt
+	app.Post("/llms/generate", JWTMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -263,47 +111,18 @@ func main() {
 			return c.Status(400).SendString("Prompt and model are required")
 		}
 
-		// Create the request payload for the Ollama API
-		ollamaReq := map[string]interface{}{
-			"model":  req.Model,
-			"prompt": req.Prompt,
-			"stream": false,
-		}
-
-		// Marshal the payload into JSON
-		reqBytes, err := json.Marshal(ollamaReq)
+		// Generate the response
+		response, err := GenerateResponse(url, req)
 		if err != nil {
-			return c.Status(500).SendString("Error creating request")
+			return c.Status(500).SendString(err.Error())
 		}
 
-		// Send a POST request to the Ollama API generate endpoint
-		resp, err := http.Post(url+"/api/generate", "application/json", bytes.NewBuffer(reqBytes))
-		if err != nil {
-			return c.Status(500).SendString("Error contacting Ollama")
-		}
-		defer resp.Body.Close()
-
-		// Read the response body from Ollama
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return c.Status(500).SendString("Error reading response body")
-		}
-
-		// Parse the JSON response from Ollama
-		var apiResp map[string]interface{}
-		if err := json.Unmarshal(body, &apiResp); err != nil {
-			return c.Status(500).SendString("Error parsing Ollama response")
-		}
-
-		return c.JSON(fiber.Map{
-			"model":    req.Model,
-			"response": apiResp["response"],
-		})
+		return c.JSON(response)
 	})
 
 	// POST llms/generate-streaming
 	// Generate an answer from a model and prompt with a streaming response
-	app.Post("/llms/generate-streaming", jwtMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("/llms/generate-streaming", JWTMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -326,25 +145,6 @@ func main() {
 			return c.Status(400).SendString("Prompt and model are required")
 		}
 
-		// Create the request payload for the Ollama API with streaming enabled
-		ollamaReq := map[string]interface{}{
-			"model":  req.Model,
-			"prompt": req.Prompt,
-			"stream": true,
-		}
-
-		// Marshal the payload into JSON
-		reqBytes, err := json.Marshal(ollamaReq)
-		if err != nil {
-			return c.Status(500).SendString("Error creating request")
-		}
-
-		// Send a POST request to the Ollama API generate endpoint
-		resp, err := http.Post(url+"/api/generate", "application/json", bytes.NewBuffer(reqBytes))
-		if err != nil {
-			return c.Status(500).SendString("Error contacting Ollama")
-		}
-
 		// Set response headers for streaming
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
@@ -353,30 +153,8 @@ func main() {
 
 		// Stream the response from Ollama to the client
 		c.Response().SetBodyStreamWriter(func(w *bufio.Writer) {
-			defer resp.Body.Close()
-
-			// Create a scanner to read the response line by line
-			scanner := bufio.NewScanner(resp.Body)
-
-			// Increase scanner buffer size for potentially large lines
-			buf := make([]byte, 0, 64*1024)
-			scanner.Buffer(buf, 1024*1024)
-
-			// Process each line as it arrives
-			for scanner.Scan() {
-				line := scanner.Text()
-				if line == "" {
-					continue
-				}
-
-				// Format as server-sent event
-				fmt.Fprintf(w, "data: %s\n\n", line)
-				w.Flush() // Important: flush after each line to send immediately
-			}
-
-			// Check for errors during scanning
-			if err := scanner.Err(); err != nil {
-				log.Printf("Error scanning Ollama response: %v", err)
+			if err := StreamResponse(url, req, w); err != nil {
+				log.Printf("Error streaming response: %v", err)
 			}
 		})
 		return nil
@@ -384,7 +162,7 @@ func main() {
 
 	// POST llms/models/add
 	// Pull a model from the Ollama library
-	app.Post("/llms/models/add", jwtMiddleware(), adminMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("/llms/models/add", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -407,49 +185,24 @@ func main() {
 			return c.Status(400).SendString("Model is required")
 		}
 
-		// Create the request payload for the Ollama API including stream=false
-		ollamaReq := map[string]interface{}{
-			"model":  req.Model,
-			"stream": false,
-		}
-
-		// Marshal the payload into JSON
-		reqBytes, err := json.Marshal(ollamaReq)
+		// Add the model
+		response, err := AddModel(url, req)
 		if err != nil {
-			return c.Status(500).SendString("Error creating request")
-		}
-
-		// Send a POST request to the Ollama API pull endpoint
-		resp, err := http.Post(url+"/api/pull", "application/json", bytes.NewBuffer(reqBytes))
-		if err != nil {
-			return c.Status(500).SendString("Error contacting Ollama")
-		}
-		defer resp.Body.Close()
-
-		// Read the response body from Ollama
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return c.Status(500).SendString("Error reading response body")
-		}
-
-		// Parse the JSON response from Ollama
-		var apiResp map[string]interface{}
-		if err := json.Unmarshal(body, &apiResp); err != nil {
-			return c.Status(500).SendString("Error parsing Ollama response")
+			return c.Status(500).SendString(err.Error())
 		}
 
 		// Only return a 200 if the status is "success"
-		if status, ok := apiResp["status"].(string); ok && status == "success" {
+		if status, ok := response["status"].(string); ok && status == "success" {
 			return c.Status(200).JSON(fiber.Map{"status": "success"})
 		}
 
 		// Return appropriate status code with the error from Ollama
-		return c.Status(resp.StatusCode).JSON(apiResp)
+		return c.Status(400).JSON(response)
 	})
 
 	// DELETE llms/models/delete
 	// Delete a model from Ollama
-	app.Delete("/llms/models/delete", jwtMiddleware(), adminMiddleware(), func(c *fiber.Ctx) error {
+	app.Delete("/llms/models/delete", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -472,36 +225,10 @@ func main() {
 			return c.Status(400).SendString("Model name is required")
 		}
 
-		// Create the request payload for the Ollama API
-		ollamaReq := map[string]interface{}{
-			"model": req.Model,
-		}
-
-		// Marshal the payload into JSON
-		reqBytes, err := json.Marshal(ollamaReq)
+		// Delete the model
+		err := DeleteModel(url, req)
 		if err != nil {
-			return c.Status(500).SendString("Error creating request")
-		}
-
-		// Create a DELETE request to the Ollama API
-		client := &http.Client{}
-		request, err := http.NewRequest("DELETE", url+"/api/delete", bytes.NewBuffer(reqBytes))
-		if err != nil {
-			return c.Status(500).SendString("Error creating DELETE request")
-		}
-		request.Header.Set("Content-Type", "application/json")
-
-		// Send the request
-		resp, err := client.Do(request)
-		if err != nil {
-			return c.Status(500).SendString("Error contacting Ollama: " + err.Error())
-		}
-		defer resp.Body.Close()
-
-		// Pass through the status code from Ollama
-		if resp.StatusCode != 200 {
-			body, _ := io.ReadAll(resp.Body)
-			return c.Status(resp.StatusCode).SendString("Error from Ollama API: " + string(body))
+			return c.Status(500).SendString(err.Error())
 		}
 
 		// Successful deletion
@@ -510,8 +237,7 @@ func main() {
 
 	// POST ocr/extract/image
 	// Extract text from an image using multimodal LLMs
-	// Supports .png, .jpg, and .jpeg images
-	app.Post("ocr/extract/image", jwtMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("ocr/extract/image", JWTMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -523,8 +249,16 @@ func main() {
 			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
 		}
 
-		// Get the model parameter from query
-		modelName := c.Query("model", string(Gemma3)) // Default to Gemma3 if not specified
+		// Get the model parameter from query - no default value
+		modelName := c.Query("model", "")
+
+		// Return error if model parameter is not provided
+		if modelName == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"error":            "Model parameter is required. Specify one of the supported multimodal models.",
+				"supported_models": []MultimodalModel{Gemma3, Llava7, MiniCPMv},
+			})
+		}
 
 		// Validate the model is a supported multimodal model
 		isValidModel := false
@@ -588,98 +322,16 @@ func main() {
 			})
 		}
 
-		// Convert the image to base64
-		base64Image := base64.StdEncoding.EncodeToString(fileBytes)
-
-		// Create the request payload for the Ollama API
-		ollamaReq := map[string]interface{}{
-			"model":  modelName,
-			"prompt": "Please carefully extract and transcribe all text visible in this image. Return your response as a JSON object with the following structure: {\"original_text\": \"[extracted text]\"}",
-			"images": []string{base64Image},
-			"stream": false,
-		}
-
-		// Marshal the payload into JSON
-		reqBytes, err := json.Marshal(ollamaReq)
+		// Process the image
+		result, err := ExtractTextFromImage(url, modelName, fileBytes, file.Filename)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{
-				"error":   "Error creating request",
+				"error":   "Error processing image",
 				"details": err.Error(),
 			})
 		}
 
-		// Send a POST request to the Ollama API generate endpoint
-		resp, err := http.Post(url+"/api/generate", "application/json", bytes.NewBuffer(reqBytes))
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"error":   "Error contacting Ollama",
-				"details": err.Error(),
-			})
-		}
-		defer resp.Body.Close()
-
-		// Read the response body from Ollama
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"error":   "Error reading response body",
-				"details": err.Error(),
-			})
-		}
-
-		// Parse the JSON response from Ollama
-		var apiResp map[string]interface{}
-		if err := json.Unmarshal(body, &apiResp); err != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"error":   "Error parsing Ollama response",
-				"details": err.Error(),
-				"body":    string(body),
-			})
-		}
-
-		// Extract the LLM's text response
-		responseText, ok := apiResp["response"].(string)
-		if !ok {
-			return c.Status(500).JSON(fiber.Map{
-				"error":        "Invalid response format from Ollama",
-				"raw_response": apiResp["response"],
-			})
-		}
-
-		// Try to parse the JSON content from the LLM's text response
-		// First, try to find JSON content within the response (it might be surrounded by markdown or other text)
-		jsonStart := strings.Index(responseText, "{")
-		jsonEnd := strings.LastIndex(responseText, "}") + 1
-
-		// Check if valid JSON boundaries were found
-		if jsonStart >= 0 && jsonEnd > jsonStart {
-			jsonContent := responseText[jsonStart:jsonEnd]
-
-			// Try to parse the extracted JSON content
-			var extractedData map[string]interface{}
-			if err := json.Unmarshal([]byte(jsonContent), &extractedData); err == nil {
-				// Successfully parsed JSON from LLM response
-				result := fiber.Map{
-					"file_processed": file.Filename,
-					"model":          modelName,
-				}
-
-				// Add just the original text to the result
-				if originalText, exists := extractedData["original_text"]; exists {
-					result["original_text"] = originalText
-				}
-
-				return c.JSON(result)
-			}
-		}
-
-		// If we couldn't parse JSON from the response, return the raw response with a warning
-		return c.JSON(fiber.Map{
-			"warning":        "Could not parse structured data from LLM response",
-			"raw_response":   responseText,
-			"file_processed": file.Filename,
-			"model":          modelName,
-		})
+		return c.JSON(result)
 	})
 
 	log.Fatal(app.Listen(":3000"))
