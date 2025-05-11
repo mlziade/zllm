@@ -337,15 +337,39 @@ func main() {
 			return c.Status(500).SendString("Error contacting Ollama")
 		}
 
-		// Set the response header content type
-		c.Set("Content-Type", "application/json")
+		// Set response headers for streaming
+		c.Set("Content-Type", "text/event-stream")
+		c.Set("Cache-Control", "no-cache")
+		c.Set("Connection", "keep-alive")
+		c.Set("Transfer-Encoding", "chunked")
 
 		// Stream the response from Ollama to the client
-		c.Set("Content-Type", "application/json")
 		c.Response().SetBodyStreamWriter(func(w *bufio.Writer) {
 			defer resp.Body.Close()
-			io.Copy(w, resp.Body)
-			w.Flush()
+
+			// Create a scanner to read the response line by line
+			scanner := bufio.NewScanner(resp.Body)
+
+			// Increase scanner buffer size for potentially large lines
+			buf := make([]byte, 0, 64*1024)
+			scanner.Buffer(buf, 1024*1024)
+
+			// Process each line as it arrives
+			for scanner.Scan() {
+				line := scanner.Text()
+				if line == "" {
+					continue
+				}
+
+				// Format as server-sent event
+				fmt.Fprintf(w, "data: %s\n\n", line)
+				w.Flush() // Important: flush after each line to send immediately
+			}
+
+			// Check for errors during scanning
+			if err := scanner.Err(); err != nil {
+				log.Printf("Error scanning Ollama response: %v", err)
+			}
 		})
 		return nil
 	})
