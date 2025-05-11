@@ -237,7 +237,7 @@ func main() {
 
 	// POST ocr/extract/image
 	// Extract text from an image using multimodal LLMs
-	app.Post("ocr/extract/image", JWTMiddleware(), func(c *fiber.Ctx) error {
+	app.Post("/ocr/extract/image", JWTMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
