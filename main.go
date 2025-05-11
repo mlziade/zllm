@@ -3,14 +3,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -24,6 +23,14 @@ import (
  * https://github.com/ollama/ollama/blob/main/docs/api.md
  *
  */
+
+type MultimodalModel string
+
+const (
+	Gemma3   MultimodalModel = "gemma3:4b"
+	Llava7   MultimodalModel = "llava:7b"
+	MiniCPMv MultimodalModel = "minicpm-v:8b"
+)
 
 type GenerateRequest struct {
 	Model  string `json:"model"`
@@ -502,30 +509,39 @@ func main() {
 	})
 
 	// POST ocr/extract/image
-	// Extract text from an image using Tesseract OCR
+	// Extract text from an image using multimodal LLMs
 	// Supports .png, .jpg, and .jpeg images
-	// Supports English (en) and Portuguese (pt) languages (defaults to: English)
 	app.Post("ocr/extract/image", jwtMiddleware(), func(c *fiber.Ctx) error {
-		// Check if Tesseract is installed
-		tesseractPath, err := exec.LookPath("tesseract")
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"error":   "Tesseract OCR is not installed or not in PATH",
-				"details": err.Error(),
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
+		}
+
+		// Get the Ollama URL from the .env file
+		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
+
+		// Get the model parameter from query
+		modelName := c.Query("model", string(Gemma3)) // Default to Gemma3 if not specified
+
+		// Validate the model is a supported multimodal model
+		isValidModel := false
+		supportedModels := []MultimodalModel{Gemma3, Llava7, MiniCPMv}
+		for _, m := range supportedModels {
+			if string(m) == modelName {
+				isValidModel = true
+				break
+			}
+		}
+
+		if !isValidModel {
+			return c.Status(400).JSON(fiber.Map{
+				"error":            "Unsupported model. Use one of the supported multimodal models.",
+				"supported_models": supportedModels,
 			})
 		}
-
-		log.Printf("Found tesseract at: %s", tesseractPath)
-
-		// Determine tessdata directory location
-		// Try to get it from environment variable first
-		tessdataDir := os.Getenv("TESSDATA_PREFIX")
-		if tessdataDir == "" {
-			// If not set, try to infer it from tesseract path
-			tessdataDir = strings.Replace(filepath.Dir(tesseractPath), "\\", "/", -1) + "/tessdata"
-		}
-
-		log.Printf("Using tessdata directory: %s", tessdataDir)
 
 		// Get the image file from the request
 		file, err := c.FormFile("file")
@@ -553,106 +569,116 @@ func main() {
 			})
 		}
 
-		// Get language parameter from query, default to English if not provided
-		lang := c.Query("lang", "en")
-
-		// Map to Tesseract language codes
-		var tesseractLang string
-		switch lang {
-		case "en":
-			tesseractLang = "eng"
-		case "pt":
-			tesseractLang = "por"
-		default:
-			tesseractLang = "eng" // Default to English for invalid languages
-		}
-
-		// Check if the language data file exists
-		langDataFile := fmt.Sprintf("%s/%s.traineddata", tessdataDir, tesseractLang)
-		if _, err := os.Stat(langDataFile); os.IsNotExist(err) {
-			log.Printf("Language data file not found: %s", langDataFile)
-
-			// If requested language is not English and English data exists, fallback to English
-			if tesseractLang != "eng" {
-				engDataFile := fmt.Sprintf("%s/eng.traineddata", tessdataDir)
-				if _, err := os.Stat(engDataFile); err == nil {
-					log.Printf("Falling back to English language")
-					tesseractLang = "eng"
-					lang = "en"
-				} else {
-					return c.Status(500).JSON(fiber.Map{
-						"error":    "Requested language data not available",
-						"details":  fmt.Sprintf("Language data file not found: %s", langDataFile),
-						"solution": "Please install Tesseract language data for " + lang + " or try with English (en)",
-					})
-				}
-			} else {
-				return c.Status(500).JSON(fiber.Map{
-					"error":    "English language data not available",
-					"details":  "English language training data not found",
-					"solution": "Please install Tesseract English language data",
-				})
-			}
-		}
-
-		// Create uploads directory if it doesn't exist
-		uploadsDir := "./uploads"
-		if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(uploadsDir, 0755); err != nil {
-				return c.Status(500).JSON(fiber.Map{
-					"error":   "Error creating uploads directory",
-					"details": err.Error(),
-				})
-			}
-		}
-
-		// Save the file to the uploads directory with a unique name to avoid conflicts
-		tempFilename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), file.Filename)
-		filePath := fmt.Sprintf("%s/%s", uploadsDir, tempFilename)
-		if err := c.SaveFile(file, filePath); err != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"error":   "Error saving file",
-				"details": err.Error(),
-			})
-		}
-
-		// Ensure the file is removed after processing
-		defer os.Remove(filePath)
-
-		log.Printf("Running Tesseract OCR on file: %s with language: %s", filePath, tesseractLang)
-
-		// Create command for Tesseract OCR
-		cmd := exec.Command(
-			tesseractPath,
-			filePath,
-			"stdout",
-			"-l", tesseractLang,
-			"--oem", "1", // Use LSTM OCR Engine
-			"--dpi", "300", // Assume 300 DPI for better accuracy
-			"--psm", "3", // Auto-page segmentation with OSD
-		)
-
-		// Set TESSDATA_PREFIX environment variable
-		cmd.Env = append(os.Environ(), fmt.Sprintf("TESSDATA_PREFIX=%s", filepath.Dir(tessdataDir)))
-
-		// Capture both stdout and stderr for better error diagnostics
-		out, err := cmd.CombinedOutput()
+		// Open the uploaded file
+		fileContent, err := file.Open()
 		if err != nil {
-			log.Printf("Tesseract Error: %v, Output: %s", err, string(out))
 			return c.Status(500).JSON(fiber.Map{
-				"error":   "Error running Tesseract OCR",
+				"error":   "Error opening file",
 				"details": err.Error(),
-				"output":  string(out),
-				"command": cmd.String(),
-				"env":     fmt.Sprintf("TESSDATA_PREFIX=%s", filepath.Dir(tessdataDir)),
+			})
+		}
+		defer fileContent.Close()
+
+		// Read the file content
+		fileBytes, err := io.ReadAll(fileContent)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Error reading file content",
+				"details": err.Error(),
 			})
 		}
 
-		// Return extracted text
+		// Convert the image to base64
+		base64Image := base64.StdEncoding.EncodeToString(fileBytes)
+
+		// Create the request payload for the Ollama API
+		ollamaReq := map[string]interface{}{
+			"model":  modelName,
+			"prompt": "Please carefully extract and transcribe all text visible in this image. Return your response as a JSON object with the following structure: {\"original_text\": \"[extracted text]\"}",
+			"images": []string{base64Image},
+			"stream": false,
+		}
+
+		// Marshal the payload into JSON
+		reqBytes, err := json.Marshal(ollamaReq)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Error creating request",
+				"details": err.Error(),
+			})
+		}
+
+		// Send a POST request to the Ollama API generate endpoint
+		resp, err := http.Post(url+"/api/generate", "application/json", bytes.NewBuffer(reqBytes))
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Error contacting Ollama",
+				"details": err.Error(),
+			})
+		}
+		defer resp.Body.Close()
+
+		// Read the response body from Ollama
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Error reading response body",
+				"details": err.Error(),
+			})
+		}
+
+		// Parse the JSON response from Ollama
+		var apiResp map[string]interface{}
+		if err := json.Unmarshal(body, &apiResp); err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Error parsing Ollama response",
+				"details": err.Error(),
+				"body":    string(body),
+			})
+		}
+
+		// Extract the LLM's text response
+		responseText, ok := apiResp["response"].(string)
+		if !ok {
+			return c.Status(500).JSON(fiber.Map{
+				"error":        "Invalid response format from Ollama",
+				"raw_response": apiResp["response"],
+			})
+		}
+
+		// Try to parse the JSON content from the LLM's text response
+		// First, try to find JSON content within the response (it might be surrounded by markdown or other text)
+		jsonStart := strings.Index(responseText, "{")
+		jsonEnd := strings.LastIndex(responseText, "}") + 1
+
+		// Check if valid JSON boundaries were found
+		if jsonStart >= 0 && jsonEnd > jsonStart {
+			jsonContent := responseText[jsonStart:jsonEnd]
+
+			// Try to parse the extracted JSON content
+			var extractedData map[string]interface{}
+			if err := json.Unmarshal([]byte(jsonContent), &extractedData); err == nil {
+				// Successfully parsed JSON from LLM response
+				result := fiber.Map{
+					"file_processed": file.Filename,
+					"model":          modelName,
+				}
+
+				// Add just the original text to the result
+				if originalText, exists := extractedData["original_text"]; exists {
+					result["original_text"] = originalText
+				}
+
+				return c.JSON(result)
+			}
+		}
+
+		// If we couldn't parse JSON from the response, return the raw response with a warning
 		return c.JSON(fiber.Map{
-			"text":           strings.TrimSpace(string(out)),
+			"warning":        "Could not parse structured data from LLM response",
+			"raw_response":   responseText,
 			"file_processed": file.Filename,
-			"language":       lang,
+			"model":          modelName,
 		})
 	})
 
