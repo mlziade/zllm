@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -505,10 +506,34 @@ func main() {
 	// Supports .png, .jpg, and .jpeg images
 	// Supports English (en) and Portuguese (pt) languages (defaults to: English)
 	app.Post("ocr/extract/image", jwtMiddleware(), func(c *fiber.Ctx) error {
+		// Check if Tesseract is installed
+		tesseractPath, err := exec.LookPath("tesseract")
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Tesseract OCR is not installed or not in PATH",
+				"details": err.Error(),
+			})
+		}
+		
+		log.Printf("Found tesseract at: %s", tesseractPath)
+		
+		// Determine tessdata directory location
+		// Try to get it from environment variable first
+		tessdataDir := os.Getenv("TESSDATA_PREFIX")
+		if tessdataDir == "" {
+			// If not set, try to infer it from tesseract path
+			tessdataDir = strings.Replace(filepath.Dir(tesseractPath), "\\", "/", -1) + "/tessdata"
+		}
+		
+		log.Printf("Using tessdata directory: %s", tessdataDir)
+
 		// Get the image file from the request
 		file, err := c.FormFile("file")
 		if err != nil {
-			return c.Status(400).SendString("Error parsing file")
+			return c.Status(400).JSON(fiber.Map{
+				"error":   "Error parsing file",
+				"details": err.Error(),
+			})
 		}
 
 		// Validate file extension (only allow .png, .jpg, .jpeg)
@@ -523,13 +548,15 @@ func main() {
 		}
 
 		if !isValidExtension {
-			return c.Status(400).SendString("Unsupported file type. Only .png, .jpg, and .jpeg images are supported")
+			return c.Status(400).JSON(fiber.Map{
+				"error": "Unsupported file type. Only .png, .jpg, and .jpeg images are supported",
+			})
 		}
 
 		// Get language parameter from query, default to English if not provided
 		lang := c.Query("lang", "en")
 
-		// Validate language parameter
+			// Map to Tesseract language codes
 		var tesseractLang string
 		switch lang {
 		case "en":
@@ -539,45 +566,93 @@ func main() {
 		default:
 			tesseractLang = "eng" // Default to English for invalid languages
 		}
+		
+		// Check if the language data file exists
+		langDataFile := fmt.Sprintf("%s/%s.traineddata", tessdataDir, tesseractLang)
+		if _, err := os.Stat(langDataFile); os.IsNotExist(err) {
+			log.Printf("Language data file not found: %s", langDataFile)
+			
+			// If requested language is not English and English data exists, fallback to English
+			if tesseractLang != "eng" {
+				engDataFile := fmt.Sprintf("%s/eng.traineddata", tessdataDir)
+				if _, err := os.Stat(engDataFile); err == nil {
+					log.Printf("Falling back to English language")
+					tesseractLang = "eng"
+					lang = "en"
+				} else {
+					return c.Status(500).JSON(fiber.Map{
+						"error": "Requested language data not available",
+						"details": fmt.Sprintf("Language data file not found: %s", langDataFile),
+						"solution": "Please install Tesseract language data for " + lang + " or try with English (en)"
+					})
+				}
+			} else {
+				return c.Status(500).JSON(fiber.Map{
+					"error": "English language data not available",
+					"details": "English language training data not found",
+					"solution": "Please install Tesseract English language data"
+				})
+			}
+		}
 
 		// Create uploads directory if it doesn't exist
 		uploadsDir := "./uploads"
 		if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(uploadsDir, 0755); err != nil {
-				return c.Status(500).SendString("Error creating uploads directory")
+				return c.Status(500).JSON(fiber.Map{
+					"error":   "Error creating uploads directory",
+					"details": err.Error(),
+				})
 			}
 		}
 
-		// Save the file to the uploads directory
-		filePath := fmt.Sprintf("%s/%s", uploadsDir, file.Filename)
+		// Save the file to the uploads directory with a unique name to avoid conflicts
+		tempFilename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), file.Filename)
+		filePath := fmt.Sprintf("%s/%s", uploadsDir, tempFilename)
 		if err := c.SaveFile(file, filePath); err != nil {
-			return c.Status(500).SendString("Error saving file: " + err.Error())
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Error saving file",
+				"details": err.Error(),
+			})
 		}
+		
+		// Ensure the file is removed after processing
+		defer os.Remove(filePath)
 
-		// Run Tesseract OCR on the file
+		log.Printf("Running Tesseract OCR on file: %s with language: %s", filePath, tesseractLang)
+		
+		// Create command for Tesseract OCR
 		cmd := exec.Command(
-			"tesseract",
+			tesseractPath,
 			filePath,
 			"stdout",
-			"-l", tesseractLang, // Use language from user's request
+			"-l", tesseractLang,
 			"--oem", "1", // Use LSTM OCR Engine
 			"--dpi", "300", // Assume 300 DPI for better accuracy
 			"--psm", "3", // Auto-page segmentation with OSD
 		)
+		
+		// Set TESSDATA_PREFIX environment variable
+		cmd.Env = append(os.Environ(), fmt.Sprintf("TESSDATA_PREFIX=%s", filepath.Dir(tessdataDir)))
 
 		// Capture both stdout and stderr for better error diagnostics
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return c.Status(500).SendString("Error running Tesseract OCR: " + err.Error())
+			log.Printf("Tesseract Error: %v, Output: %s", err, string(out))
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Error running Tesseract OCR",
+				"details": err.Error(),
+				"output":  string(out),
+				"command": cmd.String(),
+				"env":     fmt.Sprintf("TESSDATA_PREFIX=%s", filepath.Dir(tessdataDir)),
+			})
 		}
-
-		// Clean up temporary file after processing
-		defer os.Remove(filePath)
 
 		// Return extracted text
 		return c.JSON(fiber.Map{
 			"text":           strings.TrimSpace(string(out)),
 			"file_processed": file.Filename,
+			"language":       lang,
 		})
 	})
 
