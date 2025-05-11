@@ -514,9 +514,9 @@ func main() {
 				"details": err.Error(),
 			})
 		}
-		
+
 		log.Printf("Found tesseract at: %s", tesseractPath)
-		
+
 		// Determine tessdata directory location
 		// Try to get it from environment variable first
 		tessdataDir := os.Getenv("TESSDATA_PREFIX")
@@ -524,7 +524,7 @@ func main() {
 			// If not set, try to infer it from tesseract path
 			tessdataDir = strings.Replace(filepath.Dir(tesseractPath), "\\", "/", -1) + "/tessdata"
 		}
-		
+
 		log.Printf("Using tessdata directory: %s", tessdataDir)
 
 		// Get the image file from the request
@@ -556,7 +556,7 @@ func main() {
 		// Get language parameter from query, default to English if not provided
 		lang := c.Query("lang", "en")
 
-			// Map to Tesseract language codes
+		// Map to Tesseract language codes
 		var tesseractLang string
 		switch lang {
 		case "en":
@@ -566,12 +566,12 @@ func main() {
 		default:
 			tesseractLang = "eng" // Default to English for invalid languages
 		}
-		
+
 		// Check if the language data file exists
 		langDataFile := fmt.Sprintf("%s/%s.traineddata", tessdataDir, tesseractLang)
 		if _, err := os.Stat(langDataFile); os.IsNotExist(err) {
 			log.Printf("Language data file not found: %s", langDataFile)
-			
+
 			// If requested language is not English and English data exists, fallback to English
 			if tesseractLang != "eng" {
 				engDataFile := fmt.Sprintf("%s/eng.traineddata", tessdataDir)
@@ -581,16 +581,16 @@ func main() {
 					lang = "en"
 				} else {
 					return c.Status(500).JSON(fiber.Map{
-						"error": "Requested language data not available",
-						"details": fmt.Sprintf("Language data file not found: %s", langDataFile),
-						"solution": "Please install Tesseract language data for " + lang + " or try with English (en)"
+						"error":    "Requested language data not available",
+						"details":  fmt.Sprintf("Language data file not found: %s", langDataFile),
+						"solution": "Please install Tesseract language data for " + lang + " or try with English (en)",
 					})
 				}
 			} else {
 				return c.Status(500).JSON(fiber.Map{
-					"error": "English language data not available",
-					"details": "English language training data not found",
-					"solution": "Please install Tesseract English language data"
+					"error":    "English language data not available",
+					"details":  "English language training data not found",
+					"solution": "Please install Tesseract English language data",
 				})
 			}
 		}
@@ -615,12 +615,12 @@ func main() {
 				"details": err.Error(),
 			})
 		}
-		
+
 		// Ensure the file is removed after processing
 		defer os.Remove(filePath)
 
 		log.Printf("Running Tesseract OCR on file: %s with language: %s", filePath, tesseractLang)
-		
+
 		// Create command for Tesseract OCR
 		cmd := exec.Command(
 			tesseractPath,
@@ -631,7 +631,7 @@ func main() {
 			"--dpi", "300", // Assume 300 DPI for better accuracy
 			"--psm", "3", // Auto-page segmentation with OSD
 		)
-		
+
 		// Set TESSDATA_PREFIX environment variable
 		cmd.Env = append(os.Environ(), fmt.Sprintf("TESSDATA_PREFIX=%s", filepath.Dir(tessdataDir)))
 
