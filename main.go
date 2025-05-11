@@ -12,12 +12,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-/* Ollama Server API endpoints
- *
- * https://github.com/ollama/ollama/blob/main/docs/api.md
- *
- */
-
 func main() {
 	// Start the job worker so jobs are processed and visible
 	StartJobWorker()
@@ -32,15 +26,14 @@ func main() {
 			log.Println("Warning: Error loading .env file")
 		}
 
-		// Get API keys from .env
+		// Get API keys from .env and check if they are set
 		normalAPIKey := os.Getenv("API_KEY")
 		adminAPIKey := os.Getenv("ADMIN_API_KEY")
-
 		if normalAPIKey == "" || adminAPIKey == "" {
 			return c.Status(500).JSON(fiber.Map{"error": "API keys are not properly set in the .env file"})
 		}
 
-		// Get JWT secret key from .env
+		// Get JWT secret key from .env and check if it is set
 		jwtSecret := os.Getenv("JWT_SECRET")
 		if jwtSecret == "" {
 			return c.Status(500).JSON(fiber.Map{"error": "JWT_SECRET is not set in the .env file"})
