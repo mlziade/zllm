@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,6 +19,9 @@ import (
  */
 
 func main() {
+	// Start the job worker so jobs are processed and visible
+	StartJobWorker()
+
 	// Create a new Fiber server
 	app := fiber.New()
 
@@ -332,6 +336,152 @@ func main() {
 		}
 
 		return c.JSON(result)
+	})
+
+	// POST jobs/generate
+	// Create a new generation job (async)
+	app.Post("/jobs/generate", JWTMiddleware(), func(c *fiber.Ctx) error {
+		var req GenerateRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		}
+		if req.Prompt == "" || req.Model == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Prompt and model are required"})
+		}
+		job, err := CreateJob(JobTypeGenerate, req)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.JSON(fiber.Map{"job_id": job.ID, "status": job.Status})
+	})
+
+	// POST jobs/ocr-extract
+	// Create a new OCR extract job (async)
+	app.Post("/jobs/ocr-extract", JWTMiddleware(), func(c *fiber.Ctx) error {
+		modelName := c.Query("model", "")
+		if modelName == "" {
+			return c.Status(400).JSON(fiber.Map{
+				"error":            "Model parameter is required. Specify one of the supported multimodal models.",
+				"supported_models": []MultimodalModel{Gemma3, Llava7, MiniCPMv},
+			})
+		}
+		isValidModel := false
+		supportedModels := []MultimodalModel{Gemma3, Llava7, MiniCPMv}
+		for _, m := range supportedModels {
+			if string(m) == modelName {
+				isValidModel = true
+				break
+			}
+		}
+		if !isValidModel {
+			return c.Status(400).JSON(fiber.Map{
+				"error":            "Unsupported model. Use one of the supported multimodal models.",
+				"supported_models": supportedModels,
+			})
+		}
+		file, err := c.FormFile("file")
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"error":   "Error parsing file",
+				"details": err.Error(),
+			})
+		}
+		filename := strings.ToLower(file.Filename)
+		isValidExtension := false
+		allowedExtensions := []string{".png", ".jpg", ".jpeg"}
+		for _, ext := range allowedExtensions {
+			if strings.HasSuffix(filename, ext) {
+				isValidExtension = true
+				break
+			}
+		}
+		if !isValidExtension {
+			return c.Status(400).JSON(fiber.Map{
+				"error": "Unsupported file type. Only .png, .jpg, and .jpeg images are supported",
+			})
+		}
+		fileContent, err := file.Open()
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Error opening file",
+				"details": err.Error(),
+			})
+		}
+		defer fileContent.Close()
+		fileBytes, err := io.ReadAll(fileContent)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error":   "Error reading file content",
+				"details": err.Error(),
+			})
+		}
+		input := struct {
+			ModelName string `json:"model"`
+			FileBytes []byte `json:"file_bytes"`
+			Filename  string `json:"filename"`
+		}{
+			ModelName: modelName,
+			FileBytes: fileBytes,
+			Filename:  file.Filename,
+		}
+		job, err := CreateJob(JobTypeOCRExtract, input)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.JSON(fiber.Map{"job_id": job.ID, "status": job.Status})
+	})
+
+	// GET jobs/:id/status
+	// Check job status
+	app.Get("/jobs/:id/status", JWTMiddleware(), func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		job, err := GetJob(id)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Job not found"})
+		}
+		return c.JSON(fiber.Map{
+			"job_id":       job.ID,
+			"status":       job.Status,
+			"job_type":     job.JobType,
+			"created_at":   job.CreatedAt,
+			"fulfilled_at": job.FulfilledAt,
+		})
+	})
+
+	// GET jobs/:id/result
+	// Retrieve job result (with expiry)
+	app.Get("/jobs/:id/result", JWTMiddleware(), func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		job, err := GetJob(id)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Job not found"})
+		}
+		if job.Status != JobFulfilled {
+			return c.Status(202).JSON(fiber.Map{"status": job.Status, "message": "Job not fulfilled yet"})
+		}
+		if !IsJobResultRetrievable(job) {
+			return c.Status(410).JSON(fiber.Map{"error": "Result expired"})
+		}
+		return c.JSON(fiber.Map{
+			"job_id": job.ID,
+			"result": job.Result,
+		})
+	})
+
+	// GET jobs/list
+	// List previous jobs (admin only)
+	app.Get("/jobs/list", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
+		limit := 10
+		if l := c.Query("limit"); l != "" {
+			if n, err := strconv.Atoi(l); err == nil && n > 0 {
+				limit = n
+			}
+		}
+		jobs, err := ListJobs(limit)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.JSON(fiber.Map{"jobs": jobs})
 	})
 
 	log.Fatal(app.Listen(":3000"))

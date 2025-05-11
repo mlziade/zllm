@@ -26,3 +26,8 @@ go.work.sum
 
 # Upload files
 /uploads
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
