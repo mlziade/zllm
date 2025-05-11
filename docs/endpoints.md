@@ -225,17 +225,18 @@ Response: A stream of JSON objects with partial responses.
 
 #### **POST /ocr/extract/image**
 
-Extracts text from an image using Tesseract OCR.
+Extracts text from an image using multimodal LLMs.
 
 Request:
 - Multipart form data with a file field named "file"
 - Accepts .png, .jpg, and .jpeg image formats 
-- Optional "lang" query parameter (defaults to "en", also supports "pt")
+- Optional "model" query parameter (defaults to "gemma3:4b")
+- Supported models: "gemma3:4b", "llava:7b", "minicpm-v:8b"
 - Requires JWT authentication header
 
 Example:
 ```curl
-curl -X POST http://localhost:3000/ocr/extract/image?lang=en \
+curl -X POST http://localhost:3000/ocr/extract/image?model=gemma3:4b \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1..." \
   -F "file=@/path/to/your/image.jpg"
 ````
@@ -244,7 +245,36 @@ Response:
 
 ````json
 {
-  "text": "Extracted text from the image appears here.",
-  "file_processed": "image.jpg"
+  "original_text": "Extracted text from the image appears here.",
+  "file_processed": "image.jpg",
+  "model": "gemma3:4b"
+}
+````
+
+Error Response (Unsupported Model):
+
+````json
+{
+  "error": "Unsupported model. Use one of the supported multimodal models.",
+  "supported_models": ["gemma3:4b", "llava:7b", "minicpm-v:8b"]
+}
+````
+
+Error Response (Unsupported File Type):
+
+````json
+{
+  "error": "Unsupported file type. Only .png, .jpg, and .jpeg images are supported"
+}
+````
+
+Note: If the LLM response cannot be parsed as structured JSON, you'll receive:
+
+````json
+{
+  "warning": "Could not parse structured data from LLM response",
+  "raw_response": "LLM's raw text response",
+  "file_processed": "image.jpg",
+  "model": "gemma3:4b"
 }
 ````
