@@ -1,300 +1,1422 @@
 {
 	"info": {
-		"_postman_id": "33784376-fba9-4435-a0d7-574f090df0fe",
+		"_postman_id": "a2a93fc4-70d3-4a2e-b663-f05e944bc060",
 		"name": "zllm API Endpoints",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "16973229"
 	},
 	"item": [
 		{
-			"name": "Generate",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\r\n    \"prompt\": \"Wich name from the list below better matches with the following name 'Hunter x Hunter'. [Hunter x Hunter (2011), Hunter x Hunter, Hunter x Hunter Movie 1: Phantom Rouge, Hunter x Hunter Movie 2: The Last Mission]\",\r\n    \"model\": \"qwen2.5:1.5b\"\r\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{SERVER_URL}}/generate",
-					"host": [
-						"{{SERVER_URL}}"
-					],
-					"path": [
-						"generate"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Generate Streaming",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\r\n    \"prompt\": \"Is Harry Potter e a Pedra Filosofal and Harry Potter 3 the same movie? Responde with one of the 3 options: Yes, No, Dont Know\",\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{SERVER_URL}}/generate-streaming",
-					"host": [
-						"{{SERVER_URL}}"
-					],
-					"path": [
-						"generate-streaming"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Add model",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\r\n    \"model\": \"qwen2.5:1.5b\"\r\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{SERVER_URL}}/add-model",
-					"host": [
-						"{{SERVER_URL}}"
-					],
-					"path": [
-						"add-model"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Delete model",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "DELETE",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\r\n    \"model\": \"deepseek-r1:1.5b\"\r\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{SERVER_URL}}/delete-model",
-					"host": [
-						"{{SERVER_URL}}"
-					],
-					"path": [
-						"delete-model"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "List Models",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
-						}
-					]
-				},
-				"method": "GET",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"url": {
-					"raw": "{{SERVER_URL}}/list-models",
-					"host": [
-						"{{SERVER_URL}}"
-					],
-					"path": [
-						"list-models"
-					]
-				}
-			},
-			"response": []
-		},
-		{
 			"name": "Auth",
-			"event": [
+			"item": [
 				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"// Parse response as JSON\r",
-							"let responseJson = pm.response.json();\r",
-							"\r",
-							"// Check if 'token' exists in the response\r",
-							"if (responseJson.token) {\r",
-							"    // Set the 'token' variable in the 'Dev' environment\r",
-							"    pm.environment.set(\"token\", responseJson.token);\r",
-							"}"
-						],
-						"type": "text/javascript",
-						"packages": {}
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\r\n    \"api_key\": \"{{API_KEY}}\"\r\n    // \"api_key\": \"{{ADMIN_API_KEY}}\"\r\n}",
-					"options": {
-						"raw": {
-							"language": "json"
+					"name": "Auth",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Parse response as JSON\r",
+									"let responseJson = pm.response.json();\r",
+									"\r",
+									"// Check if 'token' exists in the response\r",
+									"if (responseJson.token) {\r",
+									"    // Set the 'token' variable in the 'Dev' environment\r",
+									"    pm.environment.set(\"token\", responseJson.token);\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
 						}
-					}
-				},
-				"url": {
-					"raw": "{{SERVER_URL}}/auth",
-					"host": [
-						"{{SERVER_URL}}"
 					],
-					"path": [
-						"auth"
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    // \"api_key\": \"{{API_KEY}}\"\r\n    \"api_key\": \"{{ADMIN_API_KEY}}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/auth",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"auth"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Successfull",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"api_key\": \"{{ADMIN_API_KEY}}\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/auth",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"auth"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:17:49 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "201"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"expires_at\": \"2025-05-11T22:17:49.1992874-03:00\",\n    \"role\": \"admin\",\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYWRtaW4iLCJleHAiOjE3NDcwMTI2Njl9.O0fJj6cYAxt8ZhVO5J-S25dachJwHmFxKpE05lQFRRc\"\n}"
+						},
+						{
+							"name": "Invalid API Key",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"api_key\": \"teste\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/auth",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"auth"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:24:40 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "27"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"error\": \"invalid API key\"\n}"
+						}
 					]
 				}
-			},
-			"response": []
+			]
 		},
 		{
-			"name": "OCR Extract Image",
-			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
+			"name": "LLMs",
+			"item": [
+				{
+					"name": "Models",
+					"item": [
 						{
-							"key": "token",
-							"value": "{{token}}",
-							"type": "string"
+							"name": "List Models",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{SERVER_URL}}/llm/model/list",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"llm",
+										"model",
+										"list"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Successfull",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"url": {
+											"raw": "{{SERVER_URL}}/llm/model/list",
+											"host": [
+												"{{SERVER_URL}}"
+											],
+											"path": [
+												"llm",
+												"model",
+												"list"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Mon, 12 May 2025 00:19:32 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "187"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"models\": [\n        \"llava:7b\",\n        \"gemma3:4b\",\n        \"qwen3:0.6b\",\n        \"tinyllama:1.1b\",\n        \"tinyllama:latest\",\n        \"gemma:2b\",\n        \"llava:latest\",\n        \"qwen2.5:0.5b\",\n        \"deepseek-r1:1.5b\",\n        \"llama3.2:1b\",\n        \"gemma3:1b\",\n        \"deepseek-r1:8b\"\n    ]\n}"
+								}
+							]
+						},
+						{
+							"name": "[ADMIN] Delete model",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"model\": \"teste\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/llm/model/delete",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"llm",
+										"model",
+										"delete"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Successfull",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"model\": \"tinyllama:1.1b\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{SERVER_URL}}/llm/model/delete",
+											"host": [
+												"{{SERVER_URL}}"
+											],
+											"path": [
+												"llm",
+												"model",
+												"delete"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Mon, 12 May 2025 00:19:57 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "59"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Model deleted successfully\",\n    \"status\": \"success\"\n}"
+								},
+								{
+									"name": "Model Not Found",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"model\": \"teste\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{SERVER_URL}}/llm/model/delete",
+											"host": [
+												"{{SERVER_URL}}"
+											],
+											"path": [
+												"llm",
+												"model",
+												"delete"
+											]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Mon, 12 May 2025 00:23:28 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "27"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": \"Model not found\"\n}"
+								}
+							]
+						},
+						{
+							"name": "[ADMIN] Add model",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "{{token}}",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"model\": \"dosent-exist\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/llm/model/add",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"llm",
+										"model",
+										"add"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Successfull",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"model\": \"tinyllama:1.1b\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{SERVER_URL}}/llm/model/add",
+											"host": [
+												"{{SERVER_URL}}"
+											],
+											"path": [
+												"llm",
+												"model",
+												"add"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Mon, 12 May 2025 00:26:26 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "20"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"status\": \"success\"\n}"
+								},
+								{
+									"name": "Not Found",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\r\n    \"model\": \"dosent-exist\"\r\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{SERVER_URL}}/llm/model/add",
+											"host": [
+												"{{SERVER_URL}}"
+											],
+											"path": [
+												"llm",
+												"model",
+												"add"
+											]
+										}
+									},
+									"status": "Bad Request",
+									"code": 400,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Date",
+											"value": "Mon, 12 May 2025 00:26:44 GMT"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										},
+										{
+											"key": "Content-Length",
+											"value": "52"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"error\": \"pull model manifest: file does not exist\"\n}"
+								}
+							]
 						}
 					]
 				},
-				"method": "POST",
-				"header": [
-					{
-						"key": "Authorization",
-						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-					}
-				],
-				"body": {
-					"mode": "formdata",
-					"formdata": [
+				{
+					"name": "Generate",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"prompt\": \"What is an LLM in 10 words?\",\r\n    \"model\": \"gemma3:1b\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/llm/generate",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"llm",
+								"generate"
+							]
+						}
+					},
+					"response": [
 						{
-							"key": "file",
-							"type": "file",
-							"src": "/C:/Users/ziade/OneDrive/Desktop/png_sample - br.png"
+							"name": "Successfull",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"prompt\": \"What is an LLM in 10 words?\",\r\n    \"model\": \"gemma3:1b\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/llm/generate",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"llm",
+										"generate"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:28:02 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "109"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"model\": \"gemma3:1b\",\n    \"response\": \"Large Language Model: Trained on massive data to generate human-like text.\"\n}"
+						},
+						{
+							"name": "Model Not Found",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"prompt\": \"What is an LLM in 10 words?\",\r\n    \"model\": \"does-not-exist\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/llm/generate",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"llm",
+										"generate"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:45:29 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "27"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"error\": \"model not found\"\n}"
 						}
 					]
 				},
-				"url": {
-					"raw": "{{SERVER_URL}}/ocr-image?lang=pt",
-					"host": [
-						"{{SERVER_URL}}"
-					],
-					"path": [
-						"ocr-image"
-					],
-					"query": [
+				{
+					"name": "Generate Streaming",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"prompt\": \"What is an LLM in 10 words?\",\r\n    \"model\": \"gemma3:1b\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/llm/generate/streaming",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"llm",
+								"generate",
+								"streaming"
+							]
+						}
+					},
+					"response": [
 						{
-							"key": "lang",
-							"value": "pt"
+							"name": "Successfull",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"prompt\": \"What is an LLM in 10 words?\",\r\n    \"model\": \"gemma3:1b\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/llm/generate/streaming",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"llm",
+										"generate",
+										"streaming"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "plain",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:46:18 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "text/event-stream"
+								},
+								{
+									"key": "Cache-Control",
+									"value": "no-cache"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "Transfer-Encoding",
+									"value": "chunked"
+								}
+							],
+							"cookie": [],
+							"body": "data: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.4947919Z\",\"response\":\"Large\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.5220978Z\",\"response\":\" Language\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.5499159Z\",\"response\":\" Models\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.5784049Z\",\"response\":\" –\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.6079089Z\",\"response\":\" powerful\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.6362522Z\",\"response\":\" AI\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.6618177Z\",\"response\":\" that\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.6893416Z\",\"response\":\" understands\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.7145364Z\",\"response\":\" and\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.7410829Z\",\"response\":\" generates\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.7678831Z\",\"response\":\" text\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.7932934Z\",\"response\":\".\",\"done\":false}\n\ndata: {\"model\":\"gemma3:1b\",\"created_at\":\"2025-05-12T00:46:19.8197761Z\",\"response\":\"\",\"done\":true,\"done_reason\":\"stop\",\"context\":[105,2364,107,3689,563,614,32050,236792,528,236743,236770,236771,4171,236881,106,107,105,4368,107,31534,22160,40121,1271,8632,12498,600,38045,532,27732,1816,236761],\"total_duration\":575064700,\"load_duration\":182804800,\"prompt_eval_count\":20,\"prompt_eval_duration\":64210700,\"eval_count\":13,\"eval_duration\":326407800}\n\n"
 						}
 					]
 				},
-				"description": "Generated from cURL: curl -X POST \\\r\n  http://localhost:3000/ocr/extract \\\r\n  -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\" \\\r\n  -F \"file=@/path/to/your/image.jpg\""
-			},
-			"response": []
+				{
+					"name": "Multimodal Text Extraction Images",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "postman-cloud:///1f005a3e-9600-4e80-be68-e1ce03cca943"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/llm/multimodal/extract/image?model=gemma3:4b",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"llm",
+								"multimodal",
+								"extract",
+								"image"
+							],
+							"query": [
+								{
+									"key": "model",
+									"value": "gemma3:4b"
+								}
+							]
+						},
+						"description": "Extract text from images using Tesseract OCR. Supports PNG, JPG, and JPEG formats."
+					},
+					"response": [
+						{
+							"name": "Successfull",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "postman-cloud:///1f005a3e-9600-4e80-be68-e1ce03cca943"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/llm/multimodal/extract/image?model=gemma3:4b",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"llm",
+										"multimodal",
+										"extract",
+										"image"
+									],
+									"query": [
+										{
+											"key": "model",
+											"value": "gemma3:4b"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:49:50 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "97"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"file_processed\": \"png_sample - br.png\",\n    \"model\": \"gemma3:4b\",\n    \"original_text\": \"EXTRAIDO EM UM OCR\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Jobs",
+			"item": [
+				{
+					"name": "[ADMIN] List Jobs",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{SERVER_URL}}/job/list?limit=5&result=False",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"job",
+								"list"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5"
+								},
+								{
+									"key": "result",
+									"value": "False"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -H \"Authorization: Bearer YOUR_ADMIN_JWT_TOKEN\" \"http://localhost:3000/jobs/list?limit=5\""
+					},
+					"response": [
+						{
+							"name": "Successfull - Result True",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{SERVER_URL}}/job/list?limit=5&result=True",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"job",
+										"list"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "5"
+										},
+										{
+											"key": "result",
+											"value": "True"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:53:10 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "1278"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"jobs\": [\n        {\n            \"id\": \"5e0b39c9-a62c-487b-8776-94bfe05f5c54\",\n            \"created_at\": \"2025-05-11T20:30:44.0283394-03:00\",\n            \"fulfilled_at\": \"2025-05-11T20:30:49.1500282-03:00\",\n            \"status\": \"fulfilled\",\n            \"job_type\": \"generate\",\n            \"input\": \"{\\\"model\\\":\\\"gemma3:1b\\\",\\\"prompt\\\":\\\"Who is the president of Brazil?\\\"}\",\n            \"result\": \"{\\\"model\\\":\\\"gemma3:1b\\\",\\\"response\\\":\\\"As of today, November 2, 2023, the President of Brazil is Luiz Inácio Lula da Silva, often referred to as Lula. \\\\n\\\\nIt’s always a good idea to double-check with a reliable news source for the very latest updates!\\\"}\"\n        },\n        {\n            \"id\": \"7c009721-a624-40be-b086-a3356fb90d62\",\n            \"created_at\": \"2025-05-11T20:25:22.1113208-03:00\",\n            \"fulfilled_at\": \"2025-05-11T20:30:36.0550346-03:00\",\n            \"status\": \"failed\",\n            \"job_type\": \"generate\",\n            \"input\": \"{\\\"model\\\":\\\"gemma3:1b\\\",\\\"prompt\\\":\\\"Who is the president of Brazil?\\\"}\",\n            \"result\": \"error contacting Ollama: Post \\\"/api/generate\\\": unsupported protocol scheme \\\"\\\"\"\n        },\n        {\n            \"id\": \"8e50b341-8ed5-4f4e-ad08-64069cd2ef08\",\n            \"created_at\": \"2025-05-11T20:16:33.6109552-03:00\",\n            \"fulfilled_at\": \"2025-05-11T20:30:36.0437242-03:00\",\n            \"status\": \"failed\",\n            \"job_type\": \"generate\",\n            \"input\": \"{\\\"model\\\":\\\"gemma3:1b\\\",\\\"prompt\\\":\\\"Who is the president of Brazil?\\\"}\",\n            \"result\": \"error contacting Ollama: Post \\\"/api/generate\\\": unsupported protocol scheme \\\"\\\"\"\n        }\n    ]\n}"
+						},
+						{
+							"name": "Successfull - Result False",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{SERVER_URL}}/job/list?limit=5&result=False",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"job",
+										"list"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "5"
+										},
+										{
+											"key": "result",
+											"value": "False"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:53:45 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "820"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"jobs\": [\n        {\n            \"id\": \"5e0b39c9-a62c-487b-8776-94bfe05f5c54\",\n            \"created_at\": \"2025-05-11T20:30:44.0283394-03:00\",\n            \"fulfilled_at\": \"2025-05-11T20:30:49.1500282-03:00\",\n            \"status\": \"fulfilled\",\n            \"job_type\": \"generate\",\n            \"input\": \"{\\\"model\\\":\\\"gemma3:1b\\\",\\\"prompt\\\":\\\"Who is the president of Brazil?\\\"}\"\n        },\n        {\n            \"id\": \"7c009721-a624-40be-b086-a3356fb90d62\",\n            \"created_at\": \"2025-05-11T20:25:22.1113208-03:00\",\n            \"fulfilled_at\": \"2025-05-11T20:30:36.0550346-03:00\",\n            \"status\": \"failed\",\n            \"job_type\": \"generate\",\n            \"input\": \"{\\\"model\\\":\\\"gemma3:1b\\\",\\\"prompt\\\":\\\"Who is the president of Brazil?\\\"}\"\n        },\n        {\n            \"id\": \"8e50b341-8ed5-4f4e-ad08-64069cd2ef08\",\n            \"created_at\": \"2025-05-11T20:16:33.6109552-03:00\",\n            \"fulfilled_at\": \"2025-05-11T20:30:36.0437242-03:00\",\n            \"status\": \"failed\",\n            \"job_type\": \"generate\",\n            \"input\": \"{\\\"model\\\":\\\"gemma3:1b\\\",\\\"prompt\\\":\\\"Who is the president of Brazil?\\\"}\"\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Generate (Job)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"prompt\": \"What is an LLM in 10 words?\",\r\n    \"model\": \"gemma3:1b\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/job/generate",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"job",
+								"generate"
+							]
+						},
+						"description": "Generated from cURL: curl -X POST http://localhost:3000/jobs/generate \\\n  -H \"Authorization: Bearer YOUR_JWT_TOKEN\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"prompt\":\"Hello, world!\",\"model\":\"your-model-name\"}'"
+					},
+					"response": [
+						{
+							"name": "Successfull",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"prompt\": \"What is an LLM in 10 words?\",\r\n    \"model\": \"gemma3:1b\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/job/generate",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"job",
+										"generate"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:56:18 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "68"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"job_id\": \"78f30ca3-39ce-45f4-b227-e60caa978e59\",\n    \"status\": \"pending\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Job Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{SERVER_URL}}/job/:job_id/status",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"job",
+								":job_id",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "job_id",
+									"value": "0bef16cf-2f00-49f9-bd02-fe81f650b53e"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET http://localhost:3000/jobs/JOB_ID/status \\\r\n  -H \"Authorization: Bearer YOUR_JWT_TOKEN\""
+					},
+					"response": [
+						{
+							"name": "Successfull",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{SERVER_URL}}/job/:job_id/status",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"job",
+										":job_id",
+										"status"
+									],
+									"variable": [
+										{
+											"key": "job_id",
+											"value": "5e0b39c9-a62c-487b-8776-94bfe05f5c54"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:55:13 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "192"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"created_at\": \"2025-05-11T20:30:44.0283394-03:00\",\n    \"fulfilled_at\": \"2025-05-11T20:30:49.1500282-03:00\",\n    \"job_id\": \"5e0b39c9-a62c-487b-8776-94bfe05f5c54\",\n    \"job_type\": \"generate\",\n    \"status\": \"fulfilled\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Retrieve Job Result",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{SERVER_URL}}/job/:job_id/result",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"job",
+								":job_id",
+								"result"
+							],
+							"variable": [
+								{
+									"key": "job_id",
+									"value": "78f30ca3-39ce-45f4-b227-e60caa978e59"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X GET http://localhost:3000/jobs/JOB_ID/result \\\r\n  -H \"Authorization: Bearer YOUR_JWT_TOKEN\""
+					},
+					"response": [
+						{
+							"name": "Expired Result",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{SERVER_URL}}/job/:job_id/result",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"job",
+										":job_id",
+										"result"
+									],
+									"variable": [
+										{
+											"key": "job_id",
+											"value": "5e0b39c9-a62c-487b-8776-94bfe05f5c54"
+										}
+									]
+								}
+							},
+							"status": "Gone",
+							"code": 410,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:55:31 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "26"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"error\": \"Result expired\"\n}"
+						},
+						{
+							"name": "Successfull - Generation",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{SERVER_URL}}/job/:job_id/result",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"job",
+										":job_id",
+										"result"
+									],
+									"variable": [
+										{
+											"key": "job_id",
+											"value": "78f30ca3-39ce-45f4-b227-e60caa978e59"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:56:44 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "166"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"job_id\": \"78f30ca3-39ce-45f4-b227-e60caa978e59\",\n    \"result\": \"{\\\"model\\\":\\\"gemma3:1b\\\",\\\"response\\\":\\\"Large Language Models – powerful AI that generates text. \\\\n\\\"}\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Multimodal Text Extraction Images",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "postman-cloud:///1f005a3e-9600-4e80-be68-e1ce03cca943"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{SERVER_URL}}/job/multimodal/extract/image?model=gemma3:4b",
+							"host": [
+								"{{SERVER_URL}}"
+							],
+							"path": [
+								"job",
+								"multimodal",
+								"extract",
+								"image"
+							],
+							"query": [
+								{
+									"key": "model",
+									"value": "gemma3:4b"
+								}
+							]
+						},
+						"description": "Generated from cURL: curl -X POST \"http://localhost:3000/jobs/ocr-extract?model=llava7\" \\\n  -H \"Authorization: Bearer YOUR_JWT_TOKEN\" \\\n  -F \"file=@/path/to/your/image.jpg\""
+					},
+					"response": [
+						{
+							"name": "Successfull",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "postman-cloud:///1f005a3e-9600-4e80-be68-e1ce03cca943"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{SERVER_URL}}/job/multimodal/extract/image?model=gemma3:4b",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"job",
+										"multimodal",
+										"extract",
+										"image"
+									],
+									"query": [
+										{
+											"key": "model",
+											"value": "gemma3:4b"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Mon, 12 May 2025 00:58:11 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "68"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"job_id\": \"393fd929-be44-4240-b583-0b9e15c99a6a\",\n    \"status\": \"pending\"\n}"
+						}
+					]
+				}
+			]
 		}
 	]
 }
