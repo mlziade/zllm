@@ -19,6 +19,8 @@ func main() {
 	// Create a new Fiber server
 	app := fiber.New()
 
+	/* Auth Endpoints */
+
 	// Authentication endpoint
 	app.Post("/auth", func(c *fiber.Ctx) error {
 		// Load the .env file
@@ -59,33 +61,12 @@ func main() {
 		})
 	})
 
-	// GET llms/models/list
-	// List all models available locally on Ollama
-	app.Get("/llms/models/list", JWTMiddleware(), func(c *fiber.Ctx) error {
-		// Load the .env file
-		if err := godotenv.Load(); err != nil {
-			log.Println("Warning: Error loading .env file")
-		}
+	/* LLMs Endpoints */
 
-		// Get the Ollama URL from the .env file
-		url := os.Getenv("OLLAMA_URL")
-		if url == "" {
-			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
-		}
-
-		// Get the list of models from Ollama
-		models, err := ListModels(url)
-		if err != nil {
-			return c.Status(500).SendString(err.Error())
-		}
-
-		// Return the formatted response
-		return c.JSON(fiber.Map{"models": models})
-	})
-
-	// POST llms/generate
+	// POST llm/generate
 	// Generate a answer from a model and prompt
-	app.Post("/llms/generate", JWTMiddleware(), func(c *fiber.Ctx) error {
+	// This endpoint requires a JWT token for authentication
+	app.Post("/llm/generate", JWTMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -117,9 +98,10 @@ func main() {
 		return c.JSON(response)
 	})
 
-	// POST llms/generate-streaming
+	// POST llm/generate/streaming
 	// Generate an answer from a model and prompt with a streaming response
-	app.Post("/llms/generate-streaming", JWTMiddleware(), func(c *fiber.Ctx) error {
+	// This endpoint requires a JWT token for authentication
+	app.Post("/llm/generate/streaming", JWTMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -157,84 +139,10 @@ func main() {
 		return nil
 	})
 
-	// POST llms/models/add
-	// Pull a model from the Ollama library
-	app.Post("/llms/models/add", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
-		// Load the .env file
-		if err := godotenv.Load(); err != nil {
-			log.Println("Warning: Error loading .env file")
-		}
-
-		// Get the Ollama URL from the .env file
-		url := os.Getenv("OLLAMA_URL")
-		if url == "" {
-			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
-		}
-
-		// Parse the request body into an AddModelRequest structure
-		var req AddModelRequest
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).SendString("Error parsing request body")
-		}
-
-		// Ensure the model field is provided
-		if req.Model == "" {
-			return c.Status(400).SendString("Model is required")
-		}
-
-		// Add the model
-		response, err := AddModel(url, req)
-		if err != nil {
-			return c.Status(500).SendString(err.Error())
-		}
-
-		// Only return a 200 if the status is "success"
-		if status, ok := response["status"].(string); ok && status == "success" {
-			return c.Status(200).JSON(fiber.Map{"status": "success"})
-		}
-
-		// Return appropriate status code with the error from Ollama
-		return c.Status(400).JSON(response)
-	})
-
-	// DELETE llms/models/delete
-	// Delete a model from Ollama
-	app.Delete("/llms/models/delete", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
-		// Load the .env file
-		if err := godotenv.Load(); err != nil {
-			log.Println("Warning: Error loading .env file")
-		}
-
-		// Get the Ollama URL from the .env file
-		url := os.Getenv("OLLAMA_URL")
-		if url == "" {
-			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
-		}
-
-		// Parse the request body into a DeleteModelRequest structure
-		var req DeleteModelRequest
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(400).SendString("Error parsing request body")
-		}
-
-		// Ensure the model field is provided
-		if req.Model == "" {
-			return c.Status(400).SendString("Model name is required")
-		}
-
-		// Delete the model
-		err := DeleteModel(url, req)
-		if err != nil {
-			return c.Status(500).SendString(err.Error())
-		}
-
-		// Successful deletion
-		return c.JSON(fiber.Map{"status": "success", "message": "Model deleted successfully"})
-	})
-
-	// POST ocr/extract/image
+	// POST llm/multimodal/extract/image
 	// Extract text from an image using multimodal LLMs
-	app.Post("/ocr/extract/image", JWTMiddleware(), func(c *fiber.Ctx) error {
+	// This endpoint requires a JWT token for authentication
+	app.Post("/llm/multimodal/extract/image", JWTMiddleware(), func(c *fiber.Ctx) error {
 		// Load the .env file
 		if err := godotenv.Load(); err != nil {
 			log.Println("Warning: Error loading .env file")
@@ -331,9 +239,114 @@ func main() {
 		return c.JSON(result)
 	})
 
-	// POST jobs/generate
-	// Create a new generation job (async)
-	app.Post("/jobs/generate", JWTMiddleware(), func(c *fiber.Ctx) error {
+	// POST llm/model/add
+	// Pull a model from the Ollama library and add it to the local instance
+	// This endpoint requires a JWT token for authentication and ADMIN role
+	app.Post("/llm/model/add", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
+		}
+
+		// Get the Ollama URL from the .env file
+		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
+
+		// Parse the request body into an AddModelRequest structure
+		var req AddModelRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).SendString("Error parsing request body")
+		}
+
+		// Ensure the model field is provided
+		if req.Model == "" {
+			return c.Status(400).SendString("Model is required")
+		}
+
+		// Add the model
+		response, err := AddModel(url, req)
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+
+		// Only return a 200 if the status is "success"
+		if status, ok := response["status"].(string); ok && status == "success" {
+			return c.Status(200).JSON(fiber.Map{"status": "success"})
+		}
+
+		// Return appropriate status code with the error from Ollama
+		return c.Status(400).JSON(response)
+	})
+
+	// DELETE llm/model/delete
+	// Delete a model from Ollama
+	// This endpoint requires a JWT token for authentication and ADMIN role
+	app.Delete("/llm/model/delete", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
+		}
+
+		// Get the Ollama URL from the .env file
+		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
+
+		// Parse the request body into a DeleteModelRequest structure
+		var req DeleteModelRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).SendString("Error parsing request body")
+		}
+
+		// Ensure the model field is provided
+		if req.Model == "" {
+			return c.Status(400).SendString("Model name is required")
+		}
+
+		// Delete the model
+		err := DeleteModel(url, req)
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+
+		// Successful deletion
+		return c.JSON(fiber.Map{"status": "success", "message": "Model deleted successfully"})
+	})
+
+	// GET llm/model/list
+	// List all models available locally on Ollama
+	// This endpoint requires a JWT token for authentication
+	app.Get("/llm/model/list", JWTMiddleware(), func(c *fiber.Ctx) error {
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
+		}
+
+		// Get the Ollama URL from the .env file
+		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
+
+		// Get the list of models from Ollama
+		models, err := ListModels(url)
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+
+		// Return the formatted response
+		return c.JSON(fiber.Map{"models": models})
+	})
+
+	/* Jobs Endpoints */
+
+	// POST job/generate
+	// Create a new asynchronous job to generate a response
+	// This endpoint requires a JWT token for authentication
+	app.Post("/job/generate", JWTMiddleware(), func(c *fiber.Ctx) error {
 		var req GenerateRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
@@ -348,9 +361,10 @@ func main() {
 		return c.JSON(fiber.Map{"job_id": job.ID, "status": job.Status})
 	})
 
-	// POST jobs/ocr-extract
-	// Create a new OCR extract job (async)
-	app.Post("/jobs/ocr-extract", JWTMiddleware(), func(c *fiber.Ctx) error {
+	// POST job/multimodal/extract/image
+	// Create a new asynchronous job to extract text from an image
+	// This endpoint requires a JWT token for authentication
+	app.Post("/job/multimodal/extract/image", JWTMiddleware(), func(c *fiber.Ctx) error {
 		modelName := c.Query("model", "")
 		if modelName == "" {
 			return c.Status(400).JSON(fiber.Map{
@@ -424,9 +438,10 @@ func main() {
 		return c.JSON(fiber.Map{"job_id": job.ID, "status": job.Status})
 	})
 
-	// GET jobs/:id/status
-	// Check job status
-	app.Get("/jobs/:id/status", JWTMiddleware(), func(c *fiber.Ctx) error {
+	// GET job/:id/status
+	// Check asynchronous job status
+	// This endpoint requires a JWT token for authentication
+	app.Get("/job/:id/status", JWTMiddleware(), func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		job, err := GetJob(id)
 		if err != nil {
@@ -441,9 +456,10 @@ func main() {
 		})
 	})
 
-	// GET jobs/:id/result
-	// Retrieve job result (with expiry)
-	app.Get("/jobs/:id/result", JWTMiddleware(), func(c *fiber.Ctx) error {
+	// GET job/:id/result
+	// Retrieve asynchronous job result
+	// This endpoint requires a JWT token for authentication
+	app.Get("/job/:id/result", JWTMiddleware(), func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		job, err := GetJob(id)
 		if err != nil {
@@ -461,9 +477,10 @@ func main() {
 		})
 	})
 
-	// GET jobs/list
-	// List previous jobs (admin only)
-	app.Get("/jobs/list", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
+	// GET job/list
+	// List the last previous jobs
+	// This endpoint requires a JWT token for authentication and ADMIN role
+	app.Get("/job/list", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
 		limit := 10
 		if l := c.Query("limit"); l != "" {
 			if n, err := strconv.Atoi(l); err == nil && n > 0 {
