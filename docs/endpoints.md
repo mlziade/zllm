@@ -28,7 +28,7 @@ The API uses role-based JWT authentication to secure endpoints.
 3.  Use the token for subsequent requests:
 
     ````json
-    GET /llms/models/list
+    GET /llm/model/list
     Authorization: Bearer eyJhbGciOiJIUzI1...
     ````
 
@@ -42,11 +42,13 @@ API keys should be configured in the `.env` file, refer to the [example env](../
 ### Protected Endpoints
 
 *   All endpoints except `/auth` require a valid JWT token
-*   Admin operations (like `/llms/models/add`) require a token with admin role
+*   Admin operations (like `/llm/model/add`, `/llm/model/delete`, `/job/list`) require a token with admin role
+
+---
 
 ## Endpoints
 
-### Authentication
+### Auth Endpoints
 
 #### **POST /auth**
 
@@ -70,89 +72,11 @@ Response:
 }
 ````
 
+---
+
 ### LLM Endpoints
 
-#### **GET /llms/models/list**
-
-Lists all available models on the Ollama instance.
-
-Request:
-- No request body needed
-- Requires JWT authentication header
-
-Response:
-
-````json
-{
-  "models": [
-    {
-      "name": "llama2",
-      "size": "7B",
-      "modified_at": "2023-10-15T14:22:31Z",
-      "quantization": "Q4_0"
-    },
-    {
-      "name": "mistral",
-      "size": "7B",
-      "modified_at": "2023-11-05T09:14:27Z",
-      "quantization": "Q5_K_M"
-    }
-  ]
-}
-````
-
-#### **POST /llms/models/add** (Admin only)
-
-Pulls a new model from the Ollama library.
-
-Request:
-
-````json
-{
-  "name": "llama2:7b",
-  "pull_options": {
-    "insecure": false
-  }
-}
-````
-
-Response:
-
-````json
-{
-  "status": "success",
-  "message": "Model llama2:7b successfully added",
-  "model_info": {
-    "name": "llama2",
-    "size": "7B",
-    "modified_at": "2023-10-15T14:22:31Z",
-    "quantization": "Q4_0"
-  }
-}
-````
-
-#### **DELETE /llms/models/delete** (Admin only)
-
-Deletes a model from the Ollama instance.
-
-Request:
-
-````json
-{
-  "name": "llama2:7b"
-}
-````
-
-Response:
-
-````json
-{
-  "status": "success",
-  "message": "Model llama2:7b successfully deleted"
-}
-````
-
-#### **POST /llms/generate**
+#### **POST /llm/generate**
 
 Generates text from a prompt using a specified model (non-streaming).
 
@@ -189,7 +113,7 @@ Response:
 }
 ````
 
-#### **POST /llms/generate-streaming**
+#### **POST /llm/generate/streaming**
 
 Generates text from a prompt with streaming response.
 
@@ -221,22 +145,92 @@ Response: A stream of JSON objects with partial responses.
 {"model": "gemma3:1b", "created_at": "2025-05-11T03:35:51.9490465Z", "response": "", "done": true, "done_reason": "stop", "context": [105, 2364, 107, 155122, 531, 786, 528, 4889, 1217, 531, 1138, 14470, 573, 2802, 528, 496, 23381, 5941, 236881, 106, 107], "total_duration": 73945015500, "load_duration": 4091883200, "prompt_eval_count": 25, "prompt_eval_duration": 361034000, "eval_count": 1604, "eval_duration": 69489587500}
 ````
 
-### OCR Endpoints
+#### **POST /llm/model/add** *(Admin only)*
 
-#### **POST /ocr/extract/image**
+Pulls a new model from the Ollama library.
+
+Request:
+
+````json
+{
+  "model": "llama2:7b",
+  "pull_options": {
+    "insecure": false
+  }
+}
+````
+
+Response:
+
+````json
+{
+  "status": "success"
+}
+````
+
+#### **DELETE /llm/model/delete** *(Admin only)*
+
+Deletes a model from the Ollama instance.
+
+Request:
+
+````json
+{
+  "model": "llama2:7b"
+}
+````
+
+Response:
+
+````json
+{
+  "status": "success",
+  "message": "Model deleted successfully"
+}
+````
+
+#### **GET /llm/model/list**
+
+Lists all available models on the Ollama instance.
+
+Request:
+- No request body needed
+- Requires JWT authentication header
+
+Response:
+
+````json
+{
+  "models": [
+    {
+      "name": "llama2",
+      "size": "7B",
+      "modified_at": "2023-10-15T14:22:31Z",
+      "quantization": "Q4_0"
+    },
+    {
+      "name": "mistral",
+      "size": "7B",
+      "modified_at": "2023-11-05T09:14:27Z",
+      "quantization": "Q5_K_M"
+    }
+  ]
+}
+````
+
+#### **POST /llm/multimodal/extract/image**
 
 Extracts text from an image using multimodal LLMs.
 
 Request:
 - Multipart form data with a file field named "file"
 - Accepts .png, .jpg, and .jpeg image formats 
-- Optional "model" query parameter (defaults to "gemma3:4b")
-- Supported models: "gemma3:4b", "llava:7b", "minicpm-v:8b"
+- Required "model" query parameter (supported: "gemma3:4b", "llava:7b", "minicpm-v:8b")
 - Requires JWT authentication header
 
 Example:
 ```curl
-curl -X POST http://localhost:3000/ocr/extract/image?model=gemma3:4b \
+curl -X POST http://localhost:3000/llm/multimodal/extract/image?model=gemma3:4b \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1..." \
   -F "file=@/path/to/your/image.jpg"
 ````
@@ -278,3 +272,122 @@ Note: If the LLM response cannot be parsed as structured JSON, you'll receive:
   "model": "gemma3:4b"
 }
 ````
+
+---
+
+### Job Endpoints
+
+#### **POST /job/generate**
+
+Create an asynchronous job to generate a response.
+
+Request:
+
+````json
+{
+  "model": "llama2:7b",
+  "prompt": "Explain quantum computing in simple terms",
+  "options": {
+    "temperature": 0.7,
+    "max_tokens": 500
+  }
+}
+````
+
+Response:
+
+````json
+{
+  "job_id": "job-123",
+  "status": "pending"
+}
+````
+
+#### **POST /job/multimodal/extract/image**
+
+Create an asynchronous job to extract text from an image.
+
+Request:
+- Multipart form data with a file field named "file"
+- Required "model" query parameter
+
+Response:
+
+````json
+{
+  "job_id": "job-456",
+  "status": "pending"
+}
+````
+
+#### **GET /job/:id/status**
+
+Check asynchronous job status.
+
+Response:
+
+````json
+{
+  "job_id": "job-123",
+  "status": "fulfilled",
+  "job_type": "generate",
+  "created_at": "2024-06-01T12:00:00Z",
+  "fulfilled_at": "2024-06-01T12:00:10Z"
+}
+````
+
+#### **GET /job/:id/result**
+
+Retrieve asynchronous job result.
+
+Response (fulfilled):
+
+````json
+{
+  "job_id": "job-123",
+  "result": { /* result object, e.g. LLM output or OCR result */ }
+}
+````
+
+Response (not fulfilled):
+
+````json
+{
+  "status": "pending",
+  "message": "Job not fulfilled yet"
+}
+````
+
+Response (expired):
+
+````json
+{
+  "error": "Result expired"
+}
+````
+
+#### **GET /job/list** *(Admin only)*
+
+List the last previous jobs.
+
+Query parameters:
+- `limit` (optional): number of jobs to return (default 10)
+
+Response:
+
+````json
+{
+  "jobs": [
+    {
+      "job_id": "job-123",
+      "status": "fulfilled",
+      "job_type": "generate",
+      "created_at": "2024-06-01T12:00:00Z",
+      "fulfilled_at": "2024-06-01T12:00:10Z"
+    }
+    // ...
+  ]
+}
+````
+
+---
