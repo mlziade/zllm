@@ -13,14 +13,14 @@ It uses the Golang framework [Fiber](https://github.com/gofiber/fiber) to integr
 - Golang
 - Fiber
 - Ollama
-- Tesseract
+- SQLite
 
 ### Deployment Infrastructure
 
 - Ubuntu: Linux server for hosting the application
 - Nginx: Web server acting as a reverse proxy
-- Systemd: Linux initialization system used to automate application startup and manage service processes
-- Unix Socket: For communication between Gunicorn and Nginx
+- Systemd: Service manager for the Fiber application daemon
+- Unix Socket: Communication between Nginx and the Go Fiber server
 
 ## API Documentation
 
@@ -33,10 +33,15 @@ Refer to the [API documentation](docs/endpoints.md) for detailed information abo
 - ✅ JWT authentication with role-based access
 - ✅ Integration with Ollama for local model execution
 - ✅ Text generation endpoints (streaming and non-streaming)
-- ✅ Model management (list, add)
-- ✅ OCR capabilities for text extraction from images (Tesseract)
+- ✅ Model management (list, add, remove)
+- ❌ OCR capabilities for text extraction from images (Tesseract) *[Deprecated in favor of multimodal models]*
+- ✅ OCR capabilities for text extraction from images (Multimodal Models)
+- ✅ Asynchronous Jobs implementation
+- ✅ Asynchronous Generation Jobs
 
 ### Future
-- 🚧 Multimodal models support (text + image inputs)
-- 🚧 Translation endpoint for multiple languages
+- 🚧 Asynchronous Multimodal Extraction
+- 🚧 Non multimodal LLM OCR Implementation for images and pdfs
+- 🚧 Translation endpoint for multiple languages (Multimodal models)
 - 🚧 Image generation
+- 🚧 Automated CI/CD workflow using GitHub Actions and SSH deploy
