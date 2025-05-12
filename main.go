@@ -315,6 +315,10 @@ func main() {
 		// Delete the model
 		err := DeleteModel(url, req)
 		if err != nil {
+			// Check if error message indicates model not found
+			if strings.Contains(err.Error(), "not found") {
+				return c.Status(400).JSON(fiber.Map{"error": "Model not found"})
+			}
 			return c.Status(500).SendString(err.Error())
 		}
 
