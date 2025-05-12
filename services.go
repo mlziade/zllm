@@ -75,6 +75,9 @@ func ListModels(ollamaURL string) ([]string, error) {
 
 // GenerateResponse sends a prompt to a model and returns the response
 func GenerateResponse(ollamaURL string, req GenerateRequest) (map[string]interface{}, error) {
+	if req.Model == "" {
+		return nil, fmt.Errorf("model is required")
+	}
 	// Create the request payload for the Ollama API
 	ollamaReq := map[string]interface{}{
 		"model":  req.Model,
@@ -115,6 +118,9 @@ func GenerateResponse(ollamaURL string, req GenerateRequest) (map[string]interfa
 
 // StreamResponse sets up streaming from Ollama to the client
 func StreamResponse(ollamaURL string, req GenerateRequest, writer *bufio.Writer) error {
+	if req.Model == "" {
+		return fmt.Errorf("model is required")
+	}
 	// Create the request payload for the Ollama API with streaming enabled
 	ollamaReq := map[string]interface{}{
 		"model":  req.Model,

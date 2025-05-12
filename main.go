@@ -85,8 +85,11 @@ func main() {
 		}
 
 		// Ensure the prompt and model fields are provided
-		if req.Prompt == "" || req.Model == "" {
-			return c.Status(400).SendString("Prompt and model are required")
+		if req.Prompt == "" {
+			return c.Status(400).SendString("Prompt is required")
+		}
+		if req.Model == "" {
+			return c.Status(404).SendString("Model is required")
 		}
 
 		// Generate the response
@@ -120,8 +123,11 @@ func main() {
 		}
 
 		// Ensure the prompt and model fields are provided
-		if req.Prompt == "" || req.Model == "" {
-			return c.Status(400).SendString("Prompt and model are required")
+		if req.Prompt == "" {
+			return c.Status(400).SendString("Prompt is required")
+		}
+		if req.Model == "" {
+			return c.Status(404).SendString("Model is required")
 		}
 
 		// Set response headers for streaming
