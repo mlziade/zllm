@@ -110,6 +110,11 @@ func GenerateResponse(ollamaURL string, req GenerateRequest) (map[string]interfa
 		return nil, fmt.Errorf("error parsing Ollama response: %w", err)
 	}
 
+	// Check for model not found error
+	if errMsg, ok := apiResp["error"].(string); ok && strings.Contains(errMsg, "not found") {
+		return nil, fmt.Errorf("model not found")
+	}
+
 	return map[string]interface{}{
 		"model":    req.Model,
 		"response": apiResp["response"],
@@ -140,6 +145,20 @@ func StreamResponse(ollamaURL string, req GenerateRequest, writer *bufio.Writer)
 		return fmt.Errorf("error contacting Ollama: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Check for model not found error before streaming
+	bodyPeek, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		return fmt.Errorf("error reading response body: %w", err)
+	}
+	var apiResp map[string]interface{}
+	if err := json.Unmarshal(bodyPeek, &apiResp); err == nil {
+		if errMsg, ok := apiResp["error"].(string); ok && strings.Contains(errMsg, "not found") {
+			return fmt.Errorf("model not found")
+		}
+	}
+	// If not an error, re-create the response body for streaming
+	resp.Body = io.NopCloser(io.MultiReader(bytes.NewReader(bodyPeek), resp.Body))
 
 	// Create a scanner to read the response line by line
 	scanner := bufio.NewScanner(resp.Body)
@@ -278,6 +297,11 @@ func ExtractTextFromImage(ollamaURL, modelName string, fileBytes []byte, filenam
 	var apiResp map[string]interface{}
 	if err := json.Unmarshal(body, &apiResp); err != nil {
 		return nil, fmt.Errorf("error parsing Ollama response: %w", err)
+	}
+
+	// Check for model not found error
+	if errMsg, ok := apiResp["error"].(string); ok && strings.Contains(errMsg, "not found") {
+		return nil, fmt.Errorf("model not found")
 	}
 
 	// Extract the LLM's text response

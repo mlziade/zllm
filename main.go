@@ -95,6 +95,10 @@ func main() {
 		// Generate the response
 		response, err := GenerateResponse(url, req)
 		if err != nil {
+			// Check for Ollama "model not found" error
+			if strings.Contains(err.Error(), "model not found") {
+				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
+			}
 			return c.Status(500).SendString(err.Error())
 		}
 
@@ -137,11 +141,20 @@ func main() {
 		c.Set("Transfer-Encoding", "chunked")
 
 		// Stream the response from Ollama to the client
+		var streamErr error
 		c.Response().SetBodyStreamWriter(func(w *bufio.Writer) {
-			if err := StreamResponse(url, req, w); err != nil {
-				log.Printf("Error streaming response: %v", err)
+			streamErr = StreamResponse(url, req, w)
+			if streamErr != nil {
+				log.Printf("Error streaming response: %v", streamErr)
 			}
 		})
+		if streamErr != nil {
+			// Check for Ollama "model not found" error
+			if strings.Contains(streamErr.Error(), "model not found") {
+				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
+			}
+			return c.Status(500).SendString(streamErr.Error())
+		}
 		return nil
 	})
 
@@ -236,6 +249,10 @@ func main() {
 		// Process the image
 		result, err := ExtractTextFromImage(url, modelName, fileBytes, file.Filename)
 		if err != nil {
+			// Check for Ollama "model not found" error
+			if strings.Contains(err.Error(), "model not found") {
+				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
+			}
 			return c.Status(500).JSON(fiber.Map{
 				"error":   "Error processing image",
 				"details": err.Error(),
@@ -316,8 +333,8 @@ func main() {
 		err := DeleteModel(url, req)
 		if err != nil {
 			// Check if error message indicates model not found
-			if strings.Contains(err.Error(), "not found") {
-				return c.Status(400).JSON(fiber.Map{"error": "Model not found"})
+			if strings.Contains(err.Error(), "model not found") {
+				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
 			}
 			return c.Status(500).SendString(err.Error())
 		}
@@ -366,6 +383,10 @@ func main() {
 		}
 		job, err := CreateJob(JobTypeGenerate, req)
 		if err != nil {
+			// Check for Ollama "model not found" error
+			if strings.Contains(err.Error(), "model not found") {
+				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
+			}
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 		return c.JSON(fiber.Map{"job_id": job.ID, "status": job.Status})
