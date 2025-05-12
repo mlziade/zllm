@@ -372,21 +372,42 @@ List the last previous jobs.
 
 Query parameters:
 - `limit` (optional): number of jobs to return (default 10)
+- `result` (optional, boolean): whether to include job results in the response (default: false)
 
-Response:
+If `result=true`, each job object will include a `result` field with the job's result (if available). If `result=false` (default), the `result` field is omitted.
+
+Example response (`result=true`):
 
 ````json
 {
-  "jobs": [
-    {
-      "job_id": "job-123",
-      "status": "fulfilled",
-      "job_type": "generate",
-      "created_at": "2024-06-01T12:00:00Z",
-      "fulfilled_at": "2024-06-01T12:00:10Z"
-    }
-    // ...
-  ]
+    "jobs": [
+        {
+            "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
+            "created_at": "2025-05-11T20:30:44.0283394-03:00",
+            "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
+            "status": "fulfilled",
+            "job_type": "generate",
+            "input": "{\"model\":\"gemma3:1b\",\"prompt\":\"Who is the president of Brazil?\"}",
+            "result": "{\"model\":\"gemma3:1b\",\"response\":\"As of today, November 2, 2023, the President of Brazil is Luiz Inácio Lula da Silva, often referred to as Lula. \\n\\nIt’s always a good idea to double-check with a reliable news source for the very latest updates!\"}"
+        }
+    ]
+}
+````
+
+Example response (`result=false`):
+
+````json
+{
+    "jobs": [
+        {
+            "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
+            "created_at": "2025-05-11T20:30:44.0283394-03:00",
+            "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
+            "status": "fulfilled",
+            "job_type": "generate",
+            "input": "{\"model\":\"gemma3:1b\",\"prompt\":\"Who is the president of Brazil?\"}"
+        }
+    ]
 }
 ````
 
