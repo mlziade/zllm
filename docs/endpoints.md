@@ -328,11 +328,11 @@ Response:
 
 ````json
 {
-  "job_id": "job-123",
-  "status": "fulfilled",
+  "created_at": "2025-05-11T20:30:44.0283394-03:00",
+  "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
+  "job_id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
   "job_type": "generate",
-  "created_at": "2024-06-01T12:00:00Z",
-  "fulfilled_at": "2024-06-01T12:00:10Z"
+  "status": "fulfilled"
 }
 ````
 
