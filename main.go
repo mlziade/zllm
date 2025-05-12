@@ -487,9 +487,43 @@ func main() {
 				limit = n
 			}
 		}
-		jobs, err := ListJobs(limit)
+		includeResult := false
+		if r := c.Query("result"); r != "" {
+			includeResult = strings.ToLower(r) == "true"
+		}
+		jobs, err := ListJobs(limit, includeResult)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		// If result=false, remove the Result field from each job before returning
+		if !includeResult {
+			type JobNoResult struct {
+				ID          string       `json:"id"`
+				CreatedAt   interface{}  `json:"created_at"`
+				FulfilledAt *interface{} `json:"fulfilled_at,omitempty"`
+				Status      JobStatus    `json:"status"`
+				JobType     JobType      `json:"job_type"`
+				Input       string       `json:"input"`
+			}
+			jobsNoResult := make([]JobNoResult, 0, len(jobs))
+			for _, job := range jobs {
+				createdAt := job.CreatedAt
+				var fulfilledAt interface{}
+				if job.FulfilledAt != nil {
+					fulfilledAt = *job.FulfilledAt
+				} else {
+					fulfilledAt = nil
+				}
+				jobsNoResult = append(jobsNoResult, JobNoResult{
+					ID:          job.ID,
+					CreatedAt:   createdAt,
+					FulfilledAt: &fulfilledAt,
+					Status:      job.Status,
+					JobType:     job.JobType,
+					Input:       job.Input,
+				})
+			}
+			return c.JSON(fiber.Map{"jobs": jobsNoResult})
 		}
 		return c.JSON(fiber.Map{"jobs": jobs})
 	})

@@ -95,10 +95,17 @@ func UpdateJobStatus(id string, status JobStatus) error {
 	return err
 }
 
-func ListJobs(limit int) ([]Job, error) {
+func ListJobs(limit int, withResult bool) ([]Job, error) {
 	db := GetDB()
-	rows, err := db.Query(
-		`SELECT id, created_at, fulfilled_at, status, job_type, input, result FROM jobs ORDER BY created_at DESC LIMIT ?`, limit)
+	var rows *sql.Rows
+	var err error
+	if withResult {
+		rows, err = db.Query(
+			`SELECT id, created_at, fulfilled_at, status, job_type, input, result FROM jobs ORDER BY created_at DESC LIMIT ?`, limit)
+	} else {
+		rows, err = db.Query(
+			`SELECT id, created_at, fulfilled_at, status, job_type, input FROM jobs ORDER BY created_at DESC LIMIT ?`, limit)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +115,15 @@ func ListJobs(limit int) ([]Job, error) {
 		var job Job
 		var createdAt string
 		var fulfilledAt sql.NullString
-		if err := rows.Scan(&job.ID, &createdAt, &fulfilledAt, &job.Status, &job.JobType, &job.Input, &job.Result); err != nil {
-			continue
+		if withResult {
+			if err := rows.Scan(&job.ID, &createdAt, &fulfilledAt, &job.Status, &job.JobType, &job.Input, &job.Result); err != nil {
+				continue
+			}
+		} else {
+			if err := rows.Scan(&job.ID, &createdAt, &fulfilledAt, &job.Status, &job.JobType, &job.Input); err != nil {
+				continue
+			}
+			job.Result = ""
 		}
 		job.CreatedAt, _ = time.Parse(time.RFC3339Nano, createdAt)
 		if fulfilledAt.Valid {
