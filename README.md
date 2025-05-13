@@ -38,9 +38,10 @@ Refer to the [API documentation](docs/endpoints.md) for detailed information abo
 - ✅ OCR capabilities for text extraction from images (Multimodal Models)
 - ✅ Asynchronous Jobs implementation
 - ✅ Asynchronous Generation Jobs
+- ✅ Asynchronous Multimodal Extraction
 
-### Future
-- 🚧 Asynchronous Multimodal Extraction
+
+### Projected
 - 🚧 Non multimodal LLM OCR Implementation for images and pdfs
 - 🚧 Translation endpoint for multiple languages (Multimodal models)
 - 🚧 Image generation
