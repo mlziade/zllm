@@ -54,3 +54,9 @@ func createJobsTable() error {
 	_, err := db.Exec(schema)
 	return err
 }
+
+func DeleteAllJobs() error {
+	db := GetDB()
+	_, err := db.Exec("DELETE FROM jobs")
+	return err
+}

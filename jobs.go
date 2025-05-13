@@ -429,3 +429,8 @@ func IsJobResultRetrievable(job *Job) bool {
 	}
 	return time.Since(*job.FulfilledAt) < time.Duration(expiryMinutes)*time.Minute
 }
+
+// Admin-only: Delete all jobs from the database
+func EmptyJobs() error {
+	return DeleteAllJobs()
+}

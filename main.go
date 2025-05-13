@@ -582,5 +582,15 @@ func main() {
 		return c.JSON(resp)
 	})
 
+	// DELETE job/empty
+	// Admin-only endpoint to delete all jobs
+	app.Delete("/job/empty", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
+		err := EmptyJobs()
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		return c.JSON(fiber.Map{"status": "success", "message": "All jobs deleted"})
+	})
+
 	log.Fatal(app.Listen(":3000"))
 }
