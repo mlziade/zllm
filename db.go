@@ -46,8 +46,10 @@ func createJobsTable() error {
 		fulfilled_at DATETIME,
 		status TEXT NOT NULL,
 		job_type TEXT NOT NULL,
-		input TEXT,
-		result TEXT
+		prompt TEXT,
+		model TEXT NOT NULL,
+		result TEXT,
+		images_path TEXT
 	);`
 	_, err := db.Exec(schema)
 	return err

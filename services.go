@@ -20,16 +20,22 @@ const (
 	MiniCPMv MultimodalModel = "minicpm-v:8b"
 )
 
-type GenerateRequest struct {
+type GenerationRequest struct {
 	Model  string `json:"model"`
 	Prompt string `json:"prompt"`
+}
+
+type MultiModalExtractionRequest struct {
+	Model         string `json:"model"`
+	FileBytes     []byte `json:"file_bytes"`
+	Filename      string `json:"filename"`
+	FileExtension string `json:"file_extension"`
 }
 
 type AddModelRequest struct {
 	Model string `json:"model"`
 }
 
-// DeleteModelRequest structure
 type DeleteModelRequest struct {
 	Model string `json:"model"`
 }
@@ -74,7 +80,7 @@ func ListModels(ollamaURL string) ([]string, error) {
 }
 
 // GenerateResponse sends a prompt to a model and returns the response
-func GenerateResponse(ollamaURL string, req GenerateRequest) (map[string]interface{}, error) {
+func GenerateResponse(ollamaURL string, req GenerationRequest) (map[string]interface{}, error) {
 	if req.Model == "" {
 		return nil, fmt.Errorf("model is required")
 	}
@@ -122,7 +128,7 @@ func GenerateResponse(ollamaURL string, req GenerateRequest) (map[string]interfa
 }
 
 // StreamResponse sets up streaming from Ollama to the client
-func StreamResponse(ollamaURL string, req GenerateRequest, writer *bufio.Writer) error {
+func StreamGenerationResponse(ollamaURL string, req GenerationRequest, writer *bufio.Writer) error {
 	if req.Model == "" {
 		return fmt.Errorf("model is required")
 	}
@@ -261,8 +267,8 @@ func DeleteModel(ollamaURL string, req DeleteModelRequest) error {
 	return nil
 }
 
-// ExtractTextFromImage processes an image and extracts text using multimodal LLM
-func ExtractTextFromImage(ollamaURL, modelName string, fileBytes []byte, filename string) (map[string]interface{}, error) {
+// MultiModalTextExtractionFromImage processes an image and extracts text using multimodal LLM
+func MultiModalTextExtractionFromImage(ollamaURL, modelName string, fileBytes []byte, filename string) (map[string]interface{}, error) {
 	// Convert the image to base64
 	base64Image := base64.StdEncoding.EncodeToString(fileBytes)
 

@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -79,7 +80,7 @@ func main() {
 		}
 
 		// Parse the request body into an GenerateRequest structure
-		var req GenerateRequest
+		var req GenerationRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).SendString("Error parsing request body")
 		}
@@ -121,7 +122,7 @@ func main() {
 		}
 
 		// Parse the request body into a GenerateRequest structure
-		var req GenerateRequest
+		var req GenerationRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).SendString("Error parsing request body")
 		}
@@ -143,7 +144,7 @@ func main() {
 		// Stream the response from Ollama to the client
 		var streamErr error
 		c.Response().SetBodyStreamWriter(func(w *bufio.Writer) {
-			streamErr = StreamResponse(url, req, w)
+			streamErr = StreamGenerationResponse(url, req, w)
 			if streamErr != nil {
 				log.Printf("Error streaming response: %v", streamErr)
 			}
@@ -247,7 +248,7 @@ func main() {
 		}
 
 		// Process the image
-		result, err := ExtractTextFromImage(url, modelName, fileBytes, file.Filename)
+		result, err := MultiModalTextExtractionFromImage(url, modelName, fileBytes, file.Filename)
 		if err != nil {
 			// Check for Ollama "model not found" error
 			if strings.Contains(err.Error(), "model not found") {
@@ -374,14 +375,18 @@ func main() {
 	// Create a new asynchronous job to generate a response
 	// This endpoint requires a JWT token for authentication
 	app.Post("/job/generate", JWTMiddleware(), func(c *fiber.Ctx) error {
-		var req GenerateRequest
+		var req GenerationRequest
 		if err := c.BodyParser(&req); err != nil {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
 		}
+
+		// Ensure the prompt and model fields are provided
 		if req.Prompt == "" || req.Model == "" {
 			return c.Status(400).JSON(fiber.Map{"error": "Prompt and model are required"})
 		}
-		job, err := CreateJob(JobTypeGenerate, req)
+
+		// Create a new job
+		job, err := CreateGenerationJob(req)
 		if err != nil {
 			// Check for Ollama "model not found" error
 			if strings.Contains(err.Error(), "model not found") {
@@ -389,6 +394,8 @@ func main() {
 			}
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
+
+		// Return the job ID and status
 		return c.JSON(fiber.Map{"job_id": job.ID, "status": job.Status})
 	})
 
@@ -396,6 +403,8 @@ func main() {
 	// Create a new asynchronous job to extract text from an image
 	// This endpoint requires a JWT token for authentication
 	app.Post("/job/multimodal/extract/image", JWTMiddleware(), func(c *fiber.Ctx) error {
+		var req MultiModalExtractionRequest
+		// Check if the model is provided
 		modelName := c.Query("model", "")
 		if modelName == "" {
 			return c.Status(400).JSON(fiber.Map{
@@ -403,6 +412,8 @@ func main() {
 				"supported_models": []MultimodalModel{Gemma3, Llava7, MiniCPMv},
 			})
 		}
+
+		// Validate the model is a supported multimodal model
 		isValidModel := false
 		supportedModels := []MultimodalModel{Gemma3, Llava7, MiniCPMv}
 		for _, m := range supportedModels {
@@ -417,6 +428,8 @@ func main() {
 				"supported_models": supportedModels,
 			})
 		}
+
+		// Get the image file from the request
 		file, err := c.FormFile("file")
 		if err != nil {
 			return c.Status(400).JSON(fiber.Map{
@@ -424,20 +437,29 @@ func main() {
 				"details": err.Error(),
 			})
 		}
+
 		filename := strings.ToLower(file.Filename)
-		isValidExtension := false
-		allowedExtensions := []string{".png", ".jpg", ".jpeg"}
-		for _, ext := range allowedExtensions {
-			if strings.HasSuffix(filename, ext) {
-				isValidExtension = true
-				break
-			}
+
+		// Extract the file extension
+		parts := strings.Split(strings.ToLower(filename), ".")
+		var fileExtansion string
+		if len(parts) > 1 {
+			fileExtansion = "." + parts[len(parts)-1]
+		} else {
+			return c.Status(400).JSON(fiber.Map{
+				"error": "Invalid file name. No extension found.",
+			})
 		}
-		if !isValidExtension {
+
+		// Validate file extension (only allow .png, .jpg, .jpeg)
+		allowedExtensions := []string{".png", ".jpg", ".jpeg"}
+		if !slices.Contains(allowedExtensions, fileExtansion) {
 			return c.Status(400).JSON(fiber.Map{
 				"error": "Unsupported file type. Only .png, .jpg, and .jpeg images are supported",
 			})
 		}
+
+		// Open the uploaded file
 		fileContent, err := file.Open()
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{
@@ -446,6 +468,8 @@ func main() {
 			})
 		}
 		defer fileContent.Close()
+
+		// Read the file content
 		fileBytes, err := io.ReadAll(fileContent)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{
@@ -453,20 +477,54 @@ func main() {
 				"details": err.Error(),
 			})
 		}
-		input := struct {
-			ModelName string `json:"model"`
-			FileBytes []byte `json:"file_bytes"`
-			Filename  string `json:"filename"`
-		}{
-			ModelName: modelName,
-			FileBytes: fileBytes,
-			Filename:  file.Filename,
-		}
-		job, err := CreateJob(JobTypeOCRExtract, input)
+
+		// Fill the MultiModalExtractionRequest
+		req.Model = modelName
+		req.FileBytes = fileBytes
+		req.Filename = file.Filename
+		req.FileExtension = fileExtansion
+
+		// Create a new job
+		job, err := CreateMultimodalExtractionJob(req)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
+
+		// Return the job ID and status
 		return c.JSON(fiber.Map{"job_id": job.ID, "status": job.Status})
+	})
+
+	// GET job/list
+	// List the last previous jobs
+	// This endpoint requires a JWT token for authentication and ADMIN role
+	app.Get("/job/list", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
+		// Get the limit or defaults to 10
+		limit := 10
+		if l := c.Query("limit"); l != "" {
+			if n, err := strconv.Atoi(l); err == nil && n > 0 {
+				limit = n
+			}
+		}
+
+		// Get if the result should be included
+		includeResult := false
+		if r := c.Query("result"); r != "" {
+			includeResult = strings.ToLower(r) == "true"
+		}
+
+		// Get the list of jobs
+		jobs, err := ListJobs(limit, includeResult)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+
+		// Always return an array for "jobs"
+		if jobs == nil {
+			jobs = []Job{}
+		}
+
+		// Return the list of jobs
+		return c.JSON(fiber.Map{"jobs": jobs})
 	})
 
 	// GET job/:id/status
@@ -474,89 +532,54 @@ func main() {
 	// This endpoint requires a JWT token for authentication
 	app.Get("/job/:id/status", JWTMiddleware(), func(c *fiber.Ctx) error {
 		id := c.Params("id")
-		job, err := GetJob(id)
-		if err != nil {
-			return c.Status(404).JSON(fiber.Map{"error": "Job not found"})
-		}
-		return c.JSON(fiber.Map{
-			"job_id":       job.ID,
-			"status":       job.Status,
-			"job_type":     job.JobType,
-			"created_at":   job.CreatedAt,
-			"fulfilled_at": job.FulfilledAt,
-		})
-	})
-
-	// GET job/:id/result
-	// Retrieve asynchronous job result
-	// This endpoint requires a JWT token for authentication
-	app.Get("/job/:id/result", JWTMiddleware(), func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		job, err := GetJob(id)
-		if err != nil {
-			return c.Status(404).JSON(fiber.Map{"error": "Job not found"})
-		}
-		if job.Status != JobFulfilled {
-			return c.Status(202).JSON(fiber.Map{"status": job.Status, "message": "Job not fulfilled yet"})
-		}
-		if !IsJobResultRetrievable(job) {
-			return c.Status(410).JSON(fiber.Map{"error": "Result expired"})
-		}
-		return c.JSON(fiber.Map{
-			"job_id": job.ID,
-			"result": job.Result,
-		})
-	})
-
-	// GET job/list
-	// List the last previous jobs
-	// This endpoint requires a JWT token for authentication and ADMIN role
-	app.Get("/job/list", JWTMiddleware(), AdminMiddleware(), func(c *fiber.Ctx) error {
-		limit := 10
-		if l := c.Query("limit"); l != "" {
-			if n, err := strconv.Atoi(l); err == nil && n > 0 {
-				limit = n
-			}
-		}
-		includeResult := false
-		if r := c.Query("result"); r != "" {
-			includeResult = strings.ToLower(r) == "true"
-		}
-		jobs, err := ListJobs(limit, includeResult)
+		statusPtr, err := GetJobStatus(id)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
-		// If result=false, remove the Result field from each job before returning
-		if !includeResult {
-			type JobNoResult struct {
-				ID          string       `json:"id"`
-				CreatedAt   interface{}  `json:"created_at"`
-				FulfilledAt *interface{} `json:"fulfilled_at,omitempty"`
-				Status      JobStatus    `json:"status"`
-				JobType     JobType      `json:"job_type"`
-				Input       string       `json:"input"`
-			}
-			jobsNoResult := make([]JobNoResult, 0, len(jobs))
-			for _, job := range jobs {
-				createdAt := job.CreatedAt
-				var fulfilledAt interface{}
-				if job.FulfilledAt != nil {
-					fulfilledAt = *job.FulfilledAt
-				} else {
-					fulfilledAt = nil
-				}
-				jobsNoResult = append(jobsNoResult, JobNoResult{
-					ID:          job.ID,
-					CreatedAt:   createdAt,
-					FulfilledAt: &fulfilledAt,
-					Status:      job.Status,
-					JobType:     job.JobType,
-					Input:       job.Input,
-				})
-			}
-			return c.JSON(fiber.Map{"jobs": jobsNoResult})
+		if statusPtr == nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Job not found"})
 		}
-		return c.JSON(fiber.Map{"jobs": jobs})
+		return c.JSON(fiber.Map{
+			"job_id": id,
+			"status": *statusPtr,
+		})
+	})
+
+	// GET job/:id/
+	// Retrieve asynchronous job and its result, if available
+	// This endpoint requires a JWT token for authentication
+	app.Get("/job/:id", JWTMiddleware(), func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		result := c.Query("result")
+
+		withResult := result == "true"
+		job, err := GetJob(id, withResult)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Job not found"})
+		}
+
+		is_retrievable := IsJobResultRetrievable(job)
+
+		// If the user requested the result, check if it's retrievable
+		if withResult && !is_retrievable {
+			return c.Status(410).JSON(fiber.Map{"error": "Result expired"})
+		}
+
+		// Build the response
+		resp := fiber.Map{
+			"id":           job.ID,
+			"status":       job.Status,
+			"created_at":   job.CreatedAt,
+			"fulfilled_at": job.FulfilledAt,
+			"job_type":     job.JobType,
+			"prompt":       job.Prompt,
+			"model":        job.Model,
+		}
+		if withResult && is_retrievable {
+			resp["result"] = job.Result
+		}
+
+		return c.JSON(resp)
 	})
 
 	log.Fatal(app.Listen(":3000"))
