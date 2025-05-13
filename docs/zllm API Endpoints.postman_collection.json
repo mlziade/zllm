@@ -35,7 +35,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    // \"api_key\": \"{{API_KEY}}\"\r\n    \"api_key\": \"{{ADMIN_API_KEY}}\"\r\n}",
+							"raw": "{\r\n    \"api_key\": \"{{API_KEY}}\"\r\n    // \"api_key\": \"{{ADMIN_API_KEY}}\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1139,60 +1139,16 @@
 							"variable": [
 								{
 									"key": "job_id",
-									"value": "0bef16cf-2f00-49f9-bd02-fe81f650b53e"
+									"value": "34bd75ee-25c2-4dd3-87e7-1e837039b479"
 								}
 							]
 						},
 						"description": "Generated from cURL: curl -X GET http://localhost:3000/jobs/JOB_ID/status \\\r\n  -H \"Authorization: Bearer YOUR_JWT_TOKEN\""
 					},
-					"response": [
-						{
-							"name": "Successfull",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{SERVER_URL}}/job/:job_id/status",
-									"host": [
-										"{{SERVER_URL}}"
-									],
-									"path": [
-										"job",
-										":job_id",
-										"status"
-									],
-									"variable": [
-										{
-											"key": "job_id",
-											"value": "5e0b39c9-a62c-487b-8776-94bfe05f5c54"
-										}
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": "json",
-							"header": [
-								{
-									"key": "Date",
-									"value": "Mon, 12 May 2025 00:55:13 GMT"
-								},
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								},
-								{
-									"key": "Content-Length",
-									"value": "192"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"created_at\": \"2025-05-11T20:30:44.0283394-03:00\",\n    \"fulfilled_at\": \"2025-05-11T20:30:49.1500282-03:00\",\n    \"job_id\": \"5e0b39c9-a62c-487b-8776-94bfe05f5c54\",\n    \"job_type\": \"generate\",\n    \"status\": \"fulfilled\"\n}"
-						}
-					]
+					"response": []
 				},
 				{
-					"name": "Retrieve Job Result",
+					"name": "Get Job",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -1207,19 +1163,24 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{SERVER_URL}}/job/:job_id/result",
+							"raw": "{{SERVER_URL}}/job/:job_id?result=true",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
 								"job",
-								":job_id",
-								"result"
+								":job_id"
+							],
+							"query": [
+								{
+									"key": "result",
+									"value": "true"
+								}
 							],
 							"variable": [
 								{
 									"key": "job_id",
-									"value": "78f30ca3-39ce-45f4-b227-e60caa978e59"
+									"value": "34bd75ee-25c2-4dd3-87e7-1e837039b479"
 								}
 							]
 						},
@@ -1311,11 +1272,59 @@
 							],
 							"cookie": [],
 							"body": "{\n    \"job_id\": \"78f30ca3-39ce-45f4-b227-e60caa978e59\",\n    \"result\": \"{\\\"model\\\":\\\"gemma3:1b\\\",\\\"response\\\":\\\"Large Language Models – powerful AI that generates text. \\\\n\\\"}\"\n}"
+						},
+						{
+							"name": "Successfull - Multimodal Extraction",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{SERVER_URL}}/job/:job_id?result=true",
+									"host": [
+										"{{SERVER_URL}}"
+									],
+									"path": [
+										"job",
+										":job_id"
+									],
+									"query": [
+										{
+											"key": "result",
+											"value": "true"
+										}
+									],
+									"variable": [
+										{
+											"key": "job_id",
+											"value": "34bd75ee-25c2-4dd3-87e7-1e837039b479"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Tue, 13 May 2025 16:13:37 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "547"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"created_at\": \"2025-05-13T13:11:03.3791827-03:00\",\n    \"fulfilled_at\": \"2025-05-13T13:12:51.8962099-03:00\",\n    \"id\": \"34bd75ee-25c2-4dd3-87e7-1e837039b479\",\n    \"job_type\": \"ocr_extract\",\n    \"model\": \"gemma3:4b\",\n    \"prompt\": \"Please carefully extract and transcribe all text visible in this image. Return your response as a JSON object with the following structure: {\\\"original_text\\\": \\\"[extracted text]\\\"}\",\n    \"result\": \"{\\\"file_processed\\\":\\\"34bd75ee-25c2-4dd3-87e7-1e837039b479.png\\\",\\\"model\\\":\\\"gemma3:4b\\\",\\\"original_text\\\":\\\"EXTRAÍDO EM UM OCR\\\"}\",\n    \"status\": \"fulfilled\"\n}"
 						}
 					]
 				},
 				{
-					"name": "Multimodal Text Extraction Images",
+					"name": "Multimodal Text Extraction Images (Job)",
 					"request": {
 						"auth": {
 							"type": "bearer",
