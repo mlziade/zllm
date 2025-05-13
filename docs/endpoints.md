@@ -336,6 +336,58 @@ Response:
 }
 ````
 
+#### **GET /job/:id**
+
+Retrieve asynchronous job and its result, if available.
+
+Query parameter:
+- `result=true` to include the result (if retrievable)
+
+Response (fulfilled, with result):
+
+````json
+{
+  "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
+  "status": "fulfilled",
+  "created_at": "2025-05-11T20:30:44.0283394-03:00",
+  "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
+  "job_type": "generate",
+  "prompt": "Who is the president of Brazil?",
+  "model": "gemma3:1b",
+  "result": "{\"model\":\"gemma3:1b\",\"response\":\"As of today, November 2, 2023, the President of Brazil is Luiz Inácio Lula da Silva, often referred to as Lula. \\n\\nIt’s always a good idea to double-check with a reliable news source for the very latest updates!\"}"
+}
+````
+
+Response (fulfilled, without result):
+
+````json
+{
+  "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
+  "status": "fulfilled",
+  "created_at": "2025-05-11T20:30:44.0283394-03:00",
+  "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
+  "job_type": "generate",
+  "prompt": "Who is the president of Brazil?",
+  "model": "gemma3:1b"
+}
+````
+
+Response (result expired):
+
+````json
+{
+  "error": "Result expired"
+}
+````
+
+Response (job not found):
+
+````json
+{
+  "error": "Job not found"
+}
+````
+
 #### **GET /job/:id/result**
 
 Retrieve asynchronous job result.
