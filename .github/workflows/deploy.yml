@@ -1,0 +1,40 @@
+name: Deploy ZLLM App to Hetzner
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to Hetzner server
+      run: |
+        ssh -i ~/.ssh/id_ed25519 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          set -e
+          echo "Navigating to project directory..."
+          cd ${{ secrets.PROJECT_PATH }} || { echo "Failed to navigate to project directory"; exit 1; }
+
+          echo "Pulling latest changes..."
+          git pull origin main || { echo "Failed to pull changes"; exit 1; }
+
+          echo "Building the Go application..."
+          go build -o zllm . || { echo "Failed to build the application"; exit 1; }
+
+          echo "Restarting the service..."
+          sudo systemctl restart /etc/systemctl/system/sites-available/zllm || { echo "Failed to restart the service"; exit 1; }
+
+          echo "Deployment completed successfully"
+        EOF
