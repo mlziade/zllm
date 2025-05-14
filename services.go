@@ -32,6 +32,25 @@ type MultiModalExtractionRequest struct {
 	FileExtension string `json:"file_extension"`
 }
 
+type ChatRole string
+
+const (
+	System    ChatRole = "system"
+	User      ChatRole = "user"
+	Assistant ChatRole = "assistant"
+	Tool      ChatRole = "tool"
+)
+
+type Message struct {
+	Role    ChatRole `json:"role"`
+	Content string   `json:"content"`
+}
+
+type ChatRequest struct {
+	Model    string    `json:"model"`
+	Messages []Message `json:"messages"`
+}
+
 type AddModelRequest struct {
 	Model string `json:"model"`
 }
@@ -192,6 +211,83 @@ func StreamGenerationResponse(ollamaURL string, req GenerationRequest, writer *b
 	}
 
 	return nil
+}
+
+// ChatResponse sends a chat message to a model and returns the response
+func ChatResponse(ollamaURL string, req ChatRequest) (map[string]interface{}, error) {
+	log.Printf("Generating chat response | Model: %s", req.Model)
+
+	if req.Model == "" {
+		log.Println("ChatResponse failed: model is required")
+		return nil, fmt.Errorf("model is required")
+	}
+
+	// Create the request payload for the Ollama API
+	ollamaReq := map[string]interface{}{
+		"model":    req.Model,
+		"messages": req.Messages,
+	}
+
+	// Marshal the payload into JSON
+	reqBytes, err := json.Marshal(ollamaReq)
+	if err != nil {
+		log.Printf("ChatResponse failed to marshal request | Model: %s | Error: %v", req.Model, err)
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	log.Printf("Sending chat request to Ollama | Model: %s", req.Model)
+	resp, err := http.Post(ollamaURL+"/api/chat", "application/json", bytes.NewBuffer(reqBytes))
+	if err != nil {
+		log.Printf("ChatResponse failed to contact Ollama | Model: %s | Error: %v", req.Model, err)
+		return nil, fmt.Errorf("error contacting Ollama: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Ollama may return NDJSON (one JSON object per line)
+	scanner := bufio.NewScanner(resp.Body)
+	var lastResp map[string]interface{}
+	var allResponses []string
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var obj map[string]interface{}
+		if err := json.Unmarshal(line, &obj); err != nil {
+			log.Printf("ChatResponse failed to parse Ollama NDJSON line | Model: %s | Error: %v | Line: %s", req.Model, err, string(line))
+			continue // skip invalid lines
+		}
+		lastResp = obj
+		if msg, ok := obj["message"]; ok {
+			if msgMap, ok := msg.(map[string]interface{}); ok {
+				if content, ok := msgMap["content"].(string); ok {
+					allResponses = append(allResponses, content)
+				}
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("ChatResponse scanner error | Model: %s | Error: %v", req.Model, err)
+		return nil, fmt.Errorf("error reading Ollama NDJSON: %w", err)
+	}
+
+	// If we got at least one message, return the concatenated content
+	if len(allResponses) > 0 {
+		return map[string]interface{}{
+			"model":    req.Model,
+			"response": strings.Join(allResponses, ""),
+		}, nil
+	}
+
+	// If Ollama returned a single JSON object (not NDJSON), fallback to old logic
+	if lastResp != nil {
+		return map[string]interface{}{
+			"model":    req.Model,
+			"response": lastResp["response"],
+		}, nil
+	}
+
+	return nil, fmt.Errorf("no valid response from Ollama")
 }
 
 // AddModel pulls a model from Ollama library

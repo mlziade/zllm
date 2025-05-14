@@ -159,6 +159,68 @@ func main() {
 		return nil
 	})
 
+	// POST llm/chat
+	// Generate a chat response from a model and prompt
+	// This endpoint requires a JWT token for authentication
+	app.Post("/llm/chat", JWTMiddleware(), func(c *fiber.Ctx) error {
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
+		}
+
+		// Get the Ollama URL from the .env file
+		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			log.Println("[llm/chat] OLLAMA_URL is not set in the .env file")
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
+
+		// Parse the request body into a ChatRequest structure
+		var req ChatRequest
+		if err := c.BodyParser(&req); err != nil {
+			log.Printf("[llm/chat] Failed to parse request body: %v", err)
+			return c.Status(400).SendString("Error parsing request body")
+		}
+
+		// Ensure the prompt and model fields are provided
+		if req.Model == "" {
+			log.Println("[llm/chat] Model is required in request")
+			return c.Status(400).SendString("Model is required")
+		}
+		if len(req.Messages) == 0 {
+			log.Println("[llm/chat] At least one message is required in request")
+			return c.Status(400).SendString("At least one message is required")
+		}
+
+		log.Printf("[llm/chat] Received chat request | Model: %s | Messages: %+v", req.Model, req.Messages)
+
+		// Generate the chat response
+		response, err := ChatResponse(url, req)
+		if err != nil {
+			// Check for Ollama "model not found" error
+			if strings.Contains(err.Error(), "model not found") {
+				log.Printf("[llm/chat] Model not found: %s", req.Model)
+				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
+			}
+			log.Printf("[llm/chat] Failed to generate chat response: %v", err)
+			return c.Status(500).SendString(err.Error())
+		}
+
+		log.Printf("[llm/chat] Chat response generated successfully | Model: %s", req.Model)
+		// Append the assistant's response as the last message in the conversation
+		fullConversation := append(req.Messages, Message{
+			Role:    Assistant,
+			Content: response["response"].(string),
+		})
+
+		// Add the full_conversation field to the response
+		return c.JSON(fiber.Map{
+			"model":             req.Model,
+			"response":          response["response"],
+			"full_conversation": fullConversation,
+		})
+	})
+
 	// POST llm/multimodal/extract/image
 	// Extract text from an image using multimodal LLMs
 	// This endpoint requires a JWT token for authentication
