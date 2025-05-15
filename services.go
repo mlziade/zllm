@@ -290,6 +290,61 @@ func ChatResponse(ollamaURL string, req ChatRequest) (map[string]interface{}, er
 	return nil, fmt.Errorf("no valid response from Ollama")
 }
 
+func StreamChatResponse(ollamaURL string, req ChatRequest, writer *bufio.Writer) error {
+	if req.Model == "" {
+		return fmt.Errorf("model is required")
+	}
+	ollamaReq := map[string]interface{}{
+		"model":    req.Model,
+		"messages": req.Messages,
+		"stream":   true,
+	}
+	// Marshal the payload into JSON
+	reqBytes, err := json.Marshal(ollamaReq)
+	if err != nil {
+		return fmt.Errorf("error creating request: %w", err)
+	}
+	// Send a POST request to the Ollama API chat endpoint
+	resp, err := http.Post(ollamaURL+"/api/chat", "application/json", bytes.NewBuffer(reqBytes))
+	if err != nil {
+		return fmt.Errorf("error contacting Ollama: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read a small chunk to check for model not found error
+	bodyPeek, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		return fmt.Errorf("error reading response body: %w", err)
+	}
+	var apiResp map[string]interface{}
+	if err := json.Unmarshal(bodyPeek, &apiResp); err == nil {
+		if errMsg, ok := apiResp["error"].(string); ok && strings.Contains(errMsg, "not found") {
+			return fmt.Errorf("model not found")
+		}
+	}
+	// Re-create the response body for streaming
+	resp.Body = io.NopCloser(io.MultiReader(bytes.NewReader(bodyPeek), resp.Body))
+
+	scanner := bufio.NewScanner(resp.Body)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		// Format as server-sent event
+		fmt.Fprintf(writer, "data: %s\n\n", line)
+		writer.Flush()
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("Error scanning Ollama chat response: %v", err)
+		return fmt.Errorf("error scanning Ollama chat response: %w", err)
+	}
+	return nil
+}
+
 // AddModel pulls a model from Ollama library
 func AddModel(ollamaURL string, req AddModelRequest) (map[string]interface{}, error) {
 	// Create the request payload for the Ollama API including stream=false

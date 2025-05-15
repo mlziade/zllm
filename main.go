@@ -221,6 +221,58 @@ func main() {
 		})
 	})
 
+	// POST llm/chat/streaming
+	// Generate a chat response from a model and prompt with a streaming response
+	// This endpoint requires a JWT token for authentication
+	app.Post("/llm/chat/streaming", JWTMiddleware(), func(c *fiber.Ctx) error {
+		// Load the .env file
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: Error loading .env file")
+		}
+
+		// Get the Ollama URL from the .env file
+		url := os.Getenv("OLLAMA_URL")
+		if url == "" {
+			return c.Status(500).SendString("OLLAMA_URL is not set in the .env file")
+		}
+
+		// Parse the request body into a ChatRequest structure
+		var req ChatRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).SendString("Error parsing request body")
+		}
+
+		// Ensure the model and messages fields are provided
+		if req.Model == "" {
+			return c.Status(400).SendString("Model is required")
+		}
+		if len(req.Messages) == 0 {
+			return c.Status(400).SendString("At least one message is required")
+		}
+
+		// Set response headers for streaming
+		c.Set("Content-Type", "text/event-stream")
+		c.Set("Cache-Control", "no-cache")
+		c.Set("Connection", "keep-alive")
+		c.Set("Transfer-Encoding", "chunked")
+
+		// Stream the response from Ollama to the client
+		var streamErr error
+		c.Response().SetBodyStreamWriter(func(w *bufio.Writer) {
+			streamErr = StreamChatResponse(url, req, w)
+			if streamErr != nil {
+				log.Printf("Error streaming chat response: %v", streamErr)
+			}
+		})
+		if streamErr != nil {
+			if strings.Contains(streamErr.Error(), "model not found") {
+				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
+			}
+			return c.Status(500).SendString(streamErr.Error())
+		}
+		return nil
+	})
+
 	// POST llm/multimodal/extract/image
 	// Extract text from an image using multimodal LLMs
 	// This endpoint requires a JWT token for authentication
