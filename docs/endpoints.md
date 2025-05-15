@@ -294,6 +294,82 @@ Note: If the LLM response cannot be parsed as structured JSON, you'll receive:
 
 ---
 
+
+### LLM Models Endpoints
+
+#### **POST /llm/model/add**
+
+Add (pull) a model from the Ollama library to the local instance. Requires admin role.
+
+Request:
+
+````json
+{
+  "model": "gemma3:1b"
+}
+````
+
+Response (success):
+
+````json
+{
+  "status": "success"
+}
+````
+
+Response (error):
+
+````json
+{
+  "error": "model not found"
+}
+````
+
+#### **DELETE /llm/model/delete**
+
+Delete a model from the local Ollama instance. Requires admin role.
+
+Request:
+
+````json
+{
+  "model": "gemma3:1b"
+}
+````
+
+Response (success):
+
+````json
+{
+  "status": "success",
+  "message": "Model deleted successfully"
+}
+````
+
+Response (error):
+
+````json
+{
+  "error": "model not found"
+}
+````
+
+#### **GET /llm/model/list**
+
+List all models available locally on Ollama.
+
+Response:
+
+````json
+{
+  "models": [
+    "gemma3:1b",
+    "llava:7b",
+    "minicpm-v:8b"
+  ]
+}
+````
+
 ### Job Endpoints
 
 #### **POST /job/generate**
