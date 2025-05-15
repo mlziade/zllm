@@ -34,7 +34,7 @@ jobs:
           go build -o zllm . || { echo "Failed to build the application"; exit 1; }
 
           echo "Restarting the service..."
-          sudo systemctl restart /etc/systemctl/system/sites-available/zllm || { echo "Failed to restart the service"; exit 1; }
+          sudo systemctl restart ${{ secrets.SERVICE_NAME }} || { echo "Failed to restart the service"; exit 1; }
 
           echo "Deployment completed successfully"
         EOF
