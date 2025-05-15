@@ -145,17 +145,27 @@ Response: A stream of JSON objects with partial responses.
 {"model": "gemma3:1b", "created_at": "2025-05-11T03:35:51.9490465Z", "response": "", "done": true, "done_reason": "stop", "context": [105, 2364, 107, 155122, 531, 786, 528, 4889, 1217, 531, 1138, 14470, 573, 2802, 528, 496, 23381, 5941, 236881, 106, 107], "total_duration": 73945015500, "load_duration": 4091883200, "prompt_eval_count": 25, "prompt_eval_duration": 361034000, "eval_count": 1604, "eval_duration": 69489587500}
 ````
 
-#### **POST /llm/model/add** *(Admin only)*
+#### **POST /llm/chat**
 
-Pulls a new model from the Ollama library.
+Generates a chat response from a model and chat history.
 
 Request:
 
 ````json
 {
-  "model": "llama2:7b",
-  "pull_options": {
-    "insecure": false
+  "model": "gemma3:1b",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello, can you help me with a programming question?"
+    }
+  ],
+  "options": {
+    "temperature": 0.7,
+    "max_tokens": 500,
+    "top_p": 0.9,
+    "frequency_penalty": 0,
+    "presence_penalty": 0
   }
 }
 ````
@@ -164,58 +174,67 @@ Response:
 
 ````json
 {
-  "status": "success"
-}
-````
-
-#### **DELETE /llm/model/delete** *(Admin only)*
-
-Deletes a model from the Ollama instance.
-
-Request:
-
-````json
-{
-  "model": "llama2:7b"
-}
-````
-
-Response:
-
-````json
-{
-  "status": "success",
-  "message": "Model deleted successfully"
-}
-````
-
-#### **GET /llm/model/list**
-
-Lists all available models on the Ollama instance.
-
-Request:
-- No request body needed
-- Requires JWT authentication header
-
-Response:
-
-````json
-{
-  "models": [
+  "model": "gemma3:1b",
+  "response": "Of course! I'd be happy to help with your programming question. Please go ahead and share what you're working on, any code snippets you're struggling with, or specific questions you have, and I'll do my best to assist you.",
+  "full_conversation": [
     {
-      "name": "llama2",
-      "size": "7B",
-      "modified_at": "2023-10-15T14:22:31Z",
-      "quantization": "Q4_0"
+      "role": "user",
+      "content": "Hello, can you help me with a programming question?"
     },
     {
-      "name": "mistral",
-      "size": "7B",
-      "modified_at": "2023-11-05T09:14:27Z",
-      "quantization": "Q5_K_M"
+      "role": "assistant",
+      "content": "Of course! I'd be happy to help with your programming question. Please go ahead and share what you're working on, any code snippets you're struggling with, or specific questions you have, and I'll do my best to assist you."
     }
   ]
 }
+````
+
+#### **POST /llm/chat/streaming**
+
+Generates a chat response with streaming output.
+
+Request:
+
+````json
+{
+  "model": "gemma3:1b",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Write a haiku about programming"
+    }
+  ],
+  "options": {
+    "temperature": 0.8,
+    "max_tokens": 200,
+    "top_p": 0.95,
+    "frequency_penalty": 0.1,
+    "presence_penalty": 0.1
+  }
+}
+````
+
+Response: A stream of JSON objects with partial responses.
+
+````json
+{"model":"gemma3:1b","created_at":"2025-05-11T03:35:22.7883246Z","response":" ","done":false}
+{"response": "Fingers", "done": false}
+{"response": " dance", "done": false}
+{"response": " on", "done": false}
+{"response": " keys", "done": false}
+{"response": "\n", "done": false}
+{"response": "Logic", "done": false}
+{"response": " flows", "done": false}
+{"response": " like", "done": false}
+{"response": " silent", "done": false}
+{"response": " streams", "done": false}
+{"response": "\n", "done": false}
+{"response": "Bugs", "done": false}
+{"response": " hide", "done": false}
+{"response": " in", "done": false}
+{"response": " plain", "done": false}
+{"response": " sight", "done": false}
+{"model": "gemma3:1b", "created_at": "2025-05-11T03:35:51.9490465Z", "response": "", "done": true, "done_reason": "stop", "total_duration": 73945015500, "load_duration": 4091883200, "prompt_eval_count": 25, "prompt_eval_duration": 361034000, "eval_count": 1604, "eval_duration": 69489587500}
 ````
 
 #### **POST /llm/multimodal/extract/image**
