@@ -17,10 +17,14 @@ It uses the Golang framework [Fiber](https://github.com/gofiber/fiber) to integr
 
 ### Deployment Infrastructure
 
-- Ubuntu: Linux server for hosting the application
-- Nginx: Web server acting as a reverse proxy
-- Systemd: Service manager for the Fiber application daemon
-- Unix Socket: Communication between Nginx and the Go Fiber server
+- **Ubuntu**: Linux server for hosting the application
+- **Nginx**: Web server acting as a reverse proxy
+- **Systemd**: Service manager for the Fiber application daemon
+- **Unix Socket**: Communication between Nginx and the Go Fiber server
+
+### CI/CD
+
+- **GitHub Actions**: Automated continuous integration and deployment pipeline
 
 ## API Documentation
 
