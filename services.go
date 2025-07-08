@@ -171,19 +171,20 @@ func StreamGenerationResponse(ollamaURL string, req GenerationRequest, writer *b
 	}
 	defer resp.Body.Close()
 
-	// Check for model not found error before streaming
-	bodyPeek, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	if err != nil {
-		return fmt.Errorf("error reading response body: %w", err)
-	}
-	var apiResp map[string]interface{}
-	if err := json.Unmarshal(bodyPeek, &apiResp); err == nil {
-		if errMsg, ok := apiResp["error"].(string); ok && strings.Contains(errMsg, "not found") {
-			return fmt.Errorf("model not found")
+	// Check HTTP status code first
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		var apiResp map[string]interface{}
+		if err := json.Unmarshal(body, &apiResp); err == nil {
+			if errMsg, ok := apiResp["error"].(string); ok {
+				if strings.Contains(errMsg, "not found") {
+					return fmt.Errorf("model not found")
+				}
+				return fmt.Errorf("ollama error: %s", errMsg)
+			}
 		}
+		return fmt.Errorf("ollama API error: status %d", resp.StatusCode)
 	}
-	// If not an error, re-create the response body for streaming
-	resp.Body = io.NopCloser(io.MultiReader(bytes.NewReader(bodyPeek), resp.Body))
 
 	// Create a scanner to read the response line by line
 	scanner := bufio.NewScanner(resp.Body)
@@ -311,19 +312,20 @@ func StreamChatResponse(ollamaURL string, req ChatRequest, writer *bufio.Writer)
 	}
 	defer resp.Body.Close()
 
-	// Read a small chunk to check for model not found error
-	bodyPeek, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	if err != nil {
-		return fmt.Errorf("error reading response body: %w", err)
-	}
-	var apiResp map[string]interface{}
-	if err := json.Unmarshal(bodyPeek, &apiResp); err == nil {
-		if errMsg, ok := apiResp["error"].(string); ok && strings.Contains(errMsg, "not found") {
-			return fmt.Errorf("model not found")
+	// Check HTTP status code first
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		var apiResp map[string]interface{}
+		if err := json.Unmarshal(body, &apiResp); err == nil {
+			if errMsg, ok := apiResp["error"].(string); ok {
+				if strings.Contains(errMsg, "not found") {
+					return fmt.Errorf("model not found")
+				}
+				return fmt.Errorf("ollama error: %s", errMsg)
+			}
 		}
+		return fmt.Errorf("ollama API error: status %d", resp.StatusCode)
 	}
-	// Re-create the response body for streaming
-	resp.Body = io.NopCloser(io.MultiReader(bytes.NewReader(bodyPeek), resp.Body))
 
 	scanner := bufio.NewScanner(resp.Body)
 	buf := make([]byte, 0, 64*1024)

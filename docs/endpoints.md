@@ -145,6 +145,14 @@ Response: A stream of JSON objects with partial responses.
 {"model": "gemma3:1b", "created_at": "2025-05-11T03:35:51.9490465Z", "response": "", "done": true, "done_reason": "stop", "context": [105, 2364, 107, 155122, 531, 786, 528, 4889, 1217, 531, 1138, 14470, 573, 2802, 528, 496, 23381, 5941, 236881, 106, 107], "total_duration": 73945015500, "load_duration": 4091883200, "prompt_eval_count": 25, "prompt_eval_duration": 361034000, "eval_count": 1604, "eval_duration": 69489587500}
 ````
 
+**Error Handling:**
+- If the model doesn't exist, returns HTTP 400 with `{"error": "model not found"}` before streaming starts
+- If errors occur during streaming, they are sent as Server-Sent Events:
+  ````
+  event: error
+  data: {"error": "error message"}
+  ````
+
 #### **POST /llm/chat**
 
 Generates a chat response from a model and chat history.
@@ -220,6 +228,15 @@ Response: A stream of JSON objects with partial responses.
 {"model":"gemma3:1b","created_at":"2025-05-11T03:35:22.7883246Z","response":" ","done":false}
 {"response": "Fingers", "done": false}
 {"response": " dance", "done": false}
+````
+
+**Error Handling:**
+- If the model doesn't exist, returns HTTP 400 with `{"error": "model not found"}` before streaming starts
+- If errors occur during streaming, they are sent as Server-Sent Events:
+  ````
+  event: error
+  data: {"error": "error message"}
+  ````
 {"response": " on", "done": false}
 {"response": " keys", "done": false}
 {"response": "\n", "done": false}

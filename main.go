@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -135,6 +136,24 @@ func main() {
 			return c.Status(404).SendString("Model is required")
 		}
 
+		// Pre-validate model exists before starting stream
+		models, err := ListModels(url)
+		if err != nil {
+			return c.Status(500).SendString("Error checking available models")
+		}
+
+		modelExists := false
+		for _, model := range models {
+			if model == req.Model {
+				modelExists = true
+				break
+			}
+		}
+
+		if !modelExists {
+			return c.Status(400).JSON(fiber.Map{"error": "model not found"})
+		}
+
 		// Set response headers for streaming
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
@@ -147,15 +166,11 @@ func main() {
 			streamErr = StreamGenerationResponse(url, req, w)
 			if streamErr != nil {
 				log.Printf("Error streaming response: %v", streamErr)
+				// Send error as SSE event
+				fmt.Fprintf(w, "event: error\ndata: {\"error\": \"%s\"}\n\n", streamErr.Error())
+				w.Flush()
 			}
 		})
-		if streamErr != nil {
-			// Check for Ollama "model not found" error
-			if strings.Contains(streamErr.Error(), "model not found") {
-				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
-			}
-			return c.Status(500).SendString(streamErr.Error())
-		}
 		return nil
 	})
 
@@ -250,6 +265,24 @@ func main() {
 			return c.Status(400).SendString("At least one message is required")
 		}
 
+		// Pre-validate model exists before starting stream
+		models, err := ListModels(url)
+		if err != nil {
+			return c.Status(500).SendString("Error checking available models")
+		}
+
+		modelExists := false
+		for _, model := range models {
+			if model == req.Model {
+				modelExists = true
+				break
+			}
+		}
+
+		if !modelExists {
+			return c.Status(400).JSON(fiber.Map{"error": "model not found"})
+		}
+
 		// Set response headers for streaming
 		c.Set("Content-Type", "text/event-stream")
 		c.Set("Cache-Control", "no-cache")
@@ -262,14 +295,11 @@ func main() {
 			streamErr = StreamChatResponse(url, req, w)
 			if streamErr != nil {
 				log.Printf("Error streaming chat response: %v", streamErr)
+				// Send error as SSE event
+				fmt.Fprintf(w, "event: error\ndata: {\"error\": \"%s\"}\n\n", streamErr.Error())
+				w.Flush()
 			}
 		})
-		if streamErr != nil {
-			if strings.Contains(streamErr.Error(), "model not found") {
-				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
-			}
-			return c.Status(500).SendString(streamErr.Error())
-		}
 		return nil
 	})
 
