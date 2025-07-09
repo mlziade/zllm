@@ -12,6 +12,24 @@ import (
 	"strings"
 )
 
+// isMemoryError checks if an error message indicates insufficient system memory
+func isMemoryError(errorMsg string) bool {
+	memoryIndicators := []string{
+		"model requires more system memory",
+		"not enough memory",
+		"insufficient memory",
+		"out of memory",
+		"memory allocation failed",
+	}
+
+	for _, indicator := range memoryIndicators {
+		if strings.Contains(strings.ToLower(errorMsg), strings.ToLower(indicator)) {
+			return true
+		}
+	}
+	return false
+}
+
 type MultimodalModel string
 
 const (
@@ -135,9 +153,15 @@ func GenerateResponse(ollamaURL string, req GenerationRequest) (map[string]inter
 		return nil, fmt.Errorf("error parsing Ollama response: %w", err)
 	}
 
-	// Check for model not found error
-	if errMsg, ok := apiResp["error"].(string); ok && strings.Contains(errMsg, "not found") {
-		return nil, fmt.Errorf("model not found")
+	// Check for errors in the response
+	if errMsg, ok := apiResp["error"].(string); ok {
+		if strings.Contains(errMsg, "not found") {
+			return nil, fmt.Errorf("model not found")
+		}
+		if isMemoryError(errMsg) {
+			return nil, fmt.Errorf("model requires more system memory")
+		}
+		return nil, fmt.Errorf("ollama error: %s", errMsg)
 	}
 
 	return map[string]interface{}{
@@ -179,6 +203,9 @@ func StreamGenerationResponse(ollamaURL string, req GenerationRequest, writer *b
 			if errMsg, ok := apiResp["error"].(string); ok {
 				if strings.Contains(errMsg, "not found") {
 					return fmt.Errorf("model not found")
+				}
+				if isMemoryError(errMsg) {
+					return fmt.Errorf("model requires more system memory")
 				}
 				return fmt.Errorf("ollama error: %s", errMsg)
 			}
@@ -244,6 +271,28 @@ func ChatResponse(ollamaURL string, req ChatRequest) (map[string]interface{}, er
 	}
 	defer resp.Body.Close()
 
+	// Check HTTP status code first
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		var apiResp map[string]interface{}
+		if err := json.Unmarshal(body, &apiResp); err == nil {
+			if errMsg, ok := apiResp["error"].(string); ok {
+				if strings.Contains(errMsg, "not found") {
+					log.Printf("ChatResponse model not found | Model: %s", req.Model)
+					return nil, fmt.Errorf("model not found")
+				}
+				if isMemoryError(errMsg) {
+					log.Printf("ChatResponse memory error | Model: %s | Error: %s", req.Model, errMsg)
+					return nil, fmt.Errorf("model requires more system memory")
+				}
+				log.Printf("ChatResponse Ollama error | Model: %s | Error: %s", req.Model, errMsg)
+				return nil, fmt.Errorf("ollama error: %s", errMsg)
+			}
+		}
+		log.Printf("ChatResponse API error | Model: %s | Status: %d", req.Model, resp.StatusCode)
+		return nil, fmt.Errorf("ollama API error: status %d", resp.StatusCode)
+	}
+
 	// Ollama may return NDJSON (one JSON object per line)
 	scanner := bufio.NewScanner(resp.Body)
 	var lastResp map[string]interface{}
@@ -258,6 +307,21 @@ func ChatResponse(ollamaURL string, req ChatRequest) (map[string]interface{}, er
 			log.Printf("ChatResponse failed to parse Ollama NDJSON line | Model: %s | Error: %v | Line: %s", req.Model, err, string(line))
 			continue // skip invalid lines
 		}
+		
+		// Check for error in the response object
+		if errMsg, ok := obj["error"].(string); ok {
+			if strings.Contains(errMsg, "not found") {
+				log.Printf("ChatResponse model not found in stream | Model: %s", req.Model)
+				return nil, fmt.Errorf("model not found")
+			}
+			if isMemoryError(errMsg) {
+				log.Printf("ChatResponse memory error in stream | Model: %s | Error: %s", req.Model, errMsg)
+				return nil, fmt.Errorf("model requires more system memory")
+			}
+			log.Printf("ChatResponse Ollama error in stream | Model: %s | Error: %s", req.Model, errMsg)
+			return nil, fmt.Errorf("ollama error: %s", errMsg)
+		}
+		
 		lastResp = obj
 		if msg, ok := obj["message"]; ok {
 			if msgMap, ok := msg.(map[string]interface{}); ok {
@@ -320,6 +384,9 @@ func StreamChatResponse(ollamaURL string, req ChatRequest, writer *bufio.Writer)
 			if errMsg, ok := apiResp["error"].(string); ok {
 				if strings.Contains(errMsg, "not found") {
 					return fmt.Errorf("model not found")
+				}
+				if isMemoryError(errMsg) {
+					return fmt.Errorf("model requires more system memory")
 				}
 				return fmt.Errorf("ollama error: %s", errMsg)
 			}

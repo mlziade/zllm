@@ -101,6 +101,10 @@ func main() {
 			if strings.Contains(err.Error(), "model not found") {
 				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
 			}
+			// Check for memory error
+			if strings.Contains(err.Error(), "model requires more system memory") {
+				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			}
 			return c.Status(500).SendString(err.Error())
 		}
 
@@ -166,8 +170,13 @@ func main() {
 			streamErr = StreamGenerationResponse(url, req, w)
 			if streamErr != nil {
 				log.Printf("Error streaming response: %v", streamErr)
-				// Send error as SSE event
-				fmt.Fprintf(w, "event: error\ndata: {\"error\": \"%s\"}\n\n", streamErr.Error())
+				// Check for memory error and format as proper JSON
+				if strings.Contains(streamErr.Error(), "model requires more system memory") {
+					fmt.Fprintf(w, "event: error\ndata: {\"error\": \"%s\"}\n\n", streamErr.Error())
+				} else {
+					// Send error as SSE event
+					fmt.Fprintf(w, "event: error\ndata: {\"error\": \"%s\"}\n\n", streamErr.Error())
+				}
 				w.Flush()
 			}
 		})
@@ -216,6 +225,11 @@ func main() {
 			if strings.Contains(err.Error(), "model not found") {
 				log.Printf("[llm/chat] Model not found: %s", req.Model)
 				return c.Status(400).JSON(fiber.Map{"error": "model not found"})
+			}
+			// Check for memory error
+			if strings.Contains(err.Error(), "model requires more system memory") {
+				log.Printf("[llm/chat] Memory error: %s", err.Error())
+				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 			}
 			log.Printf("[llm/chat] Failed to generate chat response: %v", err)
 			return c.Status(500).SendString(err.Error())
@@ -295,8 +309,13 @@ func main() {
 			streamErr = StreamChatResponse(url, req, w)
 			if streamErr != nil {
 				log.Printf("Error streaming chat response: %v", streamErr)
-				// Send error as SSE event
-				fmt.Fprintf(w, "event: error\ndata: {\"error\": \"%s\"}\n\n", streamErr.Error())
+				// Check for memory error and format as proper JSON
+				if strings.Contains(streamErr.Error(), "model requires more system memory") {
+					fmt.Fprintf(w, "event: error\ndata: {\"error\": \"%s\"}\n\n", streamErr.Error())
+				} else {
+					// Send error as SSE event
+					fmt.Fprintf(w, "event: error\ndata: {\"error\": \"%s\"}\n\n", streamErr.Error())
+				}
 				w.Flush()
 			}
 		})
