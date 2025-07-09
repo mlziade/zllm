@@ -46,6 +46,35 @@ API keys should be configured in the `.env` file, refer to the [example env](../
 
 ---
 
+## Error Handling
+
+### Common Error Responses
+
+The API returns standardized error responses for common scenarios:
+
+#### Authentication Errors
+- **HTTP 401**: Invalid or missing JWT token
+- **HTTP 403**: Insufficient permissions (e.g., user role trying to access admin endpoints)
+
+#### Model Errors
+- **HTTP 400**: `{"error": "model not found"}` - The requested model is not available locally
+- **HTTP 500**: `{"error": "model requires more system memory"}` - The model requires more RAM than available on the system
+
+#### General Errors
+- **HTTP 400**: Malformed request body or missing required fields
+- **HTTP 500**: Internal server errors or Ollama connection issues
+
+### Memory Error Details
+
+When a model requires more system memory than is available, the API detects this condition and returns a standardized error message. This can occur when:
+- Loading large models that exceed available RAM
+- System memory is constrained by other processes
+- The requested model size exceeds hardware capabilities
+
+For streaming endpoints, memory errors are returned as Server-Sent Events with the same error message format.
+
+---
+
 ## Endpoints
 
 ### Auth Endpoints
@@ -113,6 +142,11 @@ Response:
 }
 ````
 
+**Error Handling:**
+- **Model not found**: Returns HTTP 400 with `{"error": "model not found"}`
+- **Insufficient memory**: Returns HTTP 500 with `{"error": "model requires more system memory"}`
+- **Other errors**: Returns HTTP 500 with error message
+
 #### **POST /llm/generate/streaming**
 
 Generates text from a prompt with streaming response.
@@ -147,10 +181,16 @@ Response: A stream of JSON objects with partial responses.
 
 **Error Handling:**
 - If the model doesn't exist, returns HTTP 400 with `{"error": "model not found"}` before streaming starts
+- If there's insufficient memory, returns HTTP 500 with memory error in SSE format
 - If errors occur during streaming, they are sent as Server-Sent Events:
   ````
   event: error
   data: {"error": "error message"}
+  ````
+  For memory errors specifically:
+  ````
+  event: error
+  data: {"error": "model requires more system memory"}
   ````
 
 #### **POST /llm/chat**
@@ -197,6 +237,11 @@ Response:
 }
 ````
 
+**Error Handling:**
+- **Model not found**: Returns HTTP 400 with `{"error": "model not found"}`
+- **Insufficient memory**: Returns HTTP 500 with `{"error": "model requires more system memory"}`
+- **Other errors**: Returns HTTP 500 with error message
+
 #### **POST /llm/chat/streaming**
 
 Generates a chat response with streaming output.
@@ -232,10 +277,16 @@ Response: A stream of JSON objects with partial responses.
 
 **Error Handling:**
 - If the model doesn't exist, returns HTTP 400 with `{"error": "model not found"}` before streaming starts
+- If there's insufficient memory, returns HTTP 500 with memory error in SSE format
 - If errors occur during streaming, they are sent as Server-Sent Events:
   ````
   event: error
   data: {"error": "error message"}
+  ````
+  For memory errors specifically:
+  ````
+  event: error
+  data: {"error": "model requires more system memory"}
   ````
 {"response": " on", "done": false}
 {"response": " keys", "done": false}
