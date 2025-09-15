@@ -31,7 +31,7 @@ jobs:
           git pull origin main || { echo "Failed to pull changes"; exit 1; }
 
           echo "Building the Go application..."
-          go build -o zllm . || { echo "Failed to build the application"; exit 1; }
+          go build -o zllm ./cmd/zllm || { echo "Failed to build the application"; exit 1; }
 
           echo "Restarting the service..."
           sudo systemctl restart ${{ secrets.SERVICE_NAME }} || { echo "Failed to restart the service"; exit 1; }
