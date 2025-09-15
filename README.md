@@ -13,7 +13,8 @@ It uses the Golang framework [Fiber](https://github.com/gofiber/fiber) to integr
 - Golang
 - Fiber
 - Ollama
-- SQLite
+- SQLite with GORM ORM
+- JWT Authentication
 
 ### Deployment Infrastructure
 
@@ -49,4 +50,4 @@ Refer to the [API documentation](docs/endpoints.md) for detailed information abo
 - 🚧 Non multimodal LLM OCR Implementation for images and pdfs
 - 🚧 Translation endpoint for multiple languages (Multimodal models)
 - 🚧 Image generation
-- 🚧 Automated CI/CD workflow using GitHub Actions and SSH deploy
+- ✅ Automated CI/CD workflow using GitHub Actions and SSH deploy
