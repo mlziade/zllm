@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"log"
@@ -15,7 +15,8 @@ var (
 	once sync.Once
 )
 
-func GetDB() *gorm.DB {
+// Initialize initializes the database connection with the given models
+func Initialize(models ...interface{}) *gorm.DB {
 	once.Do(func() {
 		var err error
 
@@ -41,14 +42,25 @@ func GetDB() *gorm.DB {
 			log.Fatalf("Failed to open DB: %v", err)
 		}
 
-		// Auto-migrate the Job model
-		if err := db.AutoMigrate(&Job{}); err != nil {
-			log.Fatalf("Failed to migrate jobs table: %v", err)
+		// Auto-migrate the provided models
+		if len(models) > 0 {
+			if err := db.AutoMigrate(models...); err != nil {
+				log.Fatalf("Failed to migrate database: %v", err)
+			}
 		}
 	})
 	return db
 }
 
+// GetDB returns the database instance
+func GetDB() *gorm.DB {
+	if db == nil {
+		log.Fatal("Database not initialized. Call Initialize() first.")
+	}
+	return db
+}
+
+// DeleteAllJobs removes all jobs from the database
 func DeleteAllJobs() error {
 	db := GetDB()
 	result := db.Exec("DELETE FROM jobs")
