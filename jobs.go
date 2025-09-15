@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log"
 	"os"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type JobStatus string
@@ -28,41 +28,53 @@ const (
 )
 
 type Job struct {
-	ID          string     `json:"id"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID          string     `json:"id" gorm:"primaryKey"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt   time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 	FulfilledAt *time.Time `json:"fulfilled_at,omitempty"`
-	Status      JobStatus  `json:"status"`
-	Model       string     `json:"model"`
-	JobType     JobType    `json:"job_type"`
+	Status      JobStatus  `json:"status" gorm:"not null"`
+	Model       string     `json:"model" gorm:"not null"`
+	JobType     JobType    `json:"job_type" gorm:"not null"`
 	Prompt      string     `json:"prompt,omitempty"`
 	Result      string     `json:"result,omitempty"`
-	ImagesPath  []string   `json:"images_path,omitempty"`
+	ImagesPath  string     `json:"-" gorm:"column:images_path"` // Store as JSON string in DB
+}
+
+// GetImagesPathSlice returns ImagesPath as a slice
+func (j *Job) GetImagesPathSlice() []string {
+	if j.ImagesPath == "" {
+		return []string{}
+	}
+	var paths []string
+	json.Unmarshal([]byte(j.ImagesPath), &paths)
+	return paths
+}
+
+// SetImagesPathSlice sets ImagesPath from a slice
+func (j *Job) SetImagesPathSlice(paths []string) {
+	if len(paths) == 0 {
+		j.ImagesPath = ""
+		return
+	}
+	data, _ := json.Marshal(paths)
+	j.ImagesPath = string(data)
 }
 
 func CreateGenerationJob(request GenerationRequest) (*Job, error) {
-	// Generate a unique ID for the job
-	id := uuid.New().String()
-	now := time.Now()
-
 	// Create the Job object
 	job := &Job{
-		ID:        id,
-		CreatedAt: now,
-		Status:    JobPending,
-		JobType:   JobTypeGenerate,
-		Prompt:    request.Prompt,
-		Model:     request.Model,
+		ID:      uuid.New().String(),
+		Status:  JobPending,
+		JobType: JobTypeGenerate,
+		Prompt:  request.Prompt,
+		Model:   request.Model,
 	}
 
 	log.Printf("Creating generation job: ID=%s, Model=%s, Prompt=%s", job.ID, job.Model, job.Prompt)
 
 	// Save the job to the database
 	db := GetDB()
-	_, err := db.Exec(
-		`INSERT INTO jobs (id, created_at, status, job_type, prompt, model) VALUES (?, ?, ?, ?, ?, ?)`,
-		job.ID, job.CreatedAt, job.Status, job.JobType, job.Prompt, job.Model,
-	)
-	if err != nil {
+	if err := db.Create(job).Error; err != nil {
 		log.Printf("Failed to create generation job: ID=%s, error=%v", job.ID, err)
 		return nil, err
 	}
@@ -72,9 +84,7 @@ func CreateGenerationJob(request GenerationRequest) (*Job, error) {
 }
 
 func CreateMultimodalExtractionJob(request MultiModalExtractionRequest) (*Job, error) {
-	// Generate a unique ID for the job
 	id := uuid.New().String()
-	now := time.Now()
 
 	log.Printf("Creating multimodal extraction job: ID=%s, Model=%s, FileExtension=%s", id, request.Model, request.FileExtension)
 
@@ -93,33 +103,24 @@ func CreateMultimodalExtractionJob(request MultiModalExtractionRequest) (*Job, e
 		return nil, err
 	}
 
-	// Create the Job object
-	job := &Job{
-		ID:         id,
-		CreatedAt:  now,
-		Status:     JobPending,
-		JobType:    JobTypeOCRExtract,
-		ImagesPath: []string{filePath},
-		Model:      request.Model,
-	}
-
-	// Marshal ImagesPath to JSON for DB storage
-	imagesPathJSON, err := json.Marshal(job.ImagesPath)
-	if err != nil {
-		log.Printf("Failed to marshal images path for job: ID=%s, error=%v", id, err)
-		return nil, err
-	}
-
 	// TODO: Improve the prompt for extraction
 	extraction_prompt := "Please carefully extract and transcribe all text visible in this image. Return your response as a JSON object with the following structure: {\"original_text\": \"[extracted text]\"}"
 
+	// Create the Job object
+	job := &Job{
+		ID:      id,
+		Status:  JobPending,
+		JobType: JobTypeOCRExtract,
+		Model:   request.Model,
+		Prompt:  extraction_prompt,
+	}
+
+	// Set the images path using the helper method
+	job.SetImagesPathSlice([]string{filePath})
+
 	// Save the job to the database
 	db := GetDB()
-	_, err = db.Exec(
-		`INSERT INTO jobs (id, created_at, status, job_type, prompt, images_path, model) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		job.ID, job.CreatedAt, job.Status, job.JobType, extraction_prompt, string(imagesPathJSON), job.Model,
-	)
-	if err != nil {
+	if err := db.Create(job).Error; err != nil {
 		log.Printf("Failed to create multimodal extraction job: ID=%s, error=%v", job.ID, err)
 		return nil, err
 	}
@@ -130,12 +131,11 @@ func CreateMultimodalExtractionJob(request MultiModalExtractionRequest) (*Job, e
 
 func GetJobStatus(id string) (*JobStatus, error) {
 	db := GetDB()
-	row := db.QueryRow(`SELECT status FROM jobs WHERE id = ?`, id)
 	var job Job
 
-	err := row.Scan(&job.Status)
+	err := db.Select("status").Where("id = ?", id).First(&job).Error
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == gorm.ErrRecordNotFound {
 			return nil, nil // Job not found error
 		}
 		return nil, err // Other errors
@@ -146,42 +146,19 @@ func GetJobStatus(id string) (*JobStatus, error) {
 
 func GetJob(id string, withResult bool) (*Job, error) {
 	db := GetDB()
-	var row *sql.Row
 	var job Job
-	var createdAt string
-	var fulfilledAt sql.NullString
 
-	if withResult { // If the user wants the result
-		row = db.QueryRow(
-			`SELECT id, created_at, fulfilled_at, status, job_type, prompt, result, model FROM jobs WHERE id = ?`,
-			id,
-		)
-
-		if err := row.Scan(&job.ID, &createdAt, &fulfilledAt, &job.Status, &job.JobType, &job.Prompt, &job.Result, &job.Model); err != nil {
-			return nil, err
-		}
-	} else { // If the user doesn't want the result
-		row = db.QueryRow(
-			`SELECT id, created_at, fulfilled_at, status, job_type, prompt, model FROM jobs WHERE id = ?`,
-			id,
-		)
-
-		if err := row.Scan(&job.ID, &createdAt, &fulfilledAt, &job.Status, &job.JobType, &job.Prompt, &job.Model); err != nil {
-			return nil, err
-		}
+	query := db.Where("id = ?", id)
+	if !withResult {
+		query = query.Omit("result")
 	}
 
-	// Parse createdAt
-	t, err := time.Parse(time.RFC3339Nano, createdAt)
-	if err == nil {
-		job.CreatedAt = t
-	}
-	// Parse fulfilledAt if present
-	if fulfilledAt.Valid {
-		ft, err := time.Parse(time.RFC3339Nano, fulfilledAt.String)
-		if err == nil {
-			job.FulfilledAt = &ft
+	err := query.First(&job).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, err
 		}
+		return nil, err
 	}
 
 	return &job, nil
@@ -189,63 +166,31 @@ func GetJob(id string, withResult bool) (*Job, error) {
 
 func UpdateJobResult(id string, status JobStatus, result string) error {
 	db := GetDB()
-	now := time.Now().Format(time.RFC3339Nano)
-	_, err := db.Exec(
-		`UPDATE jobs SET status = ?, result = ?, fulfilled_at = ? WHERE id = ?`,
-		status, result, now, id,
-	)
-	return err
+	now := time.Now()
+	return db.Model(&Job{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"status":       status,
+		"result":       result,
+		"fulfilled_at": &now,
+	}).Error
 }
 
 func UpdateJobStatus(id string, status JobStatus) error {
 	db := GetDB()
-	_, err := db.Exec(
-		`UPDATE jobs SET status = ? WHERE id = ?`,
-		status, id,
-	)
-	return err
+	return db.Model(&Job{}).Where("id = ?", id).Update("status", status).Error
 }
 
 func ListJobs(limit int, withResult bool) ([]Job, error) {
 	db := GetDB()
-	var rows *sql.Rows
-	var err error
-
-	// Fetch jobs from the database
-	if withResult {
-		rows, err = db.Query(
-			`SELECT id, created_at, fulfilled_at, status, job_type, prompt, result, model FROM jobs ORDER BY created_at DESC LIMIT ?`, limit)
-	} else {
-		rows, err = db.Query(
-			`SELECT id, created_at, fulfilled_at, status, job_type, prompt, model FROM jobs ORDER BY created_at DESC LIMIT ?`, limit)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 	var jobs []Job
 
-	// Iterate through the rows and scan the data into Job structs
-	for rows.Next() {
-		var job Job
-		var createdAt string
-		var fulfilledAt sql.NullString
-		if withResult {
-			if err := rows.Scan(&job.ID, &createdAt, &fulfilledAt, &job.Status, &job.JobType, &job.Prompt, &job.Result, &job.Model); err != nil {
-				continue
-			}
-		} else {
-			if err := rows.Scan(&job.ID, &createdAt, &fulfilledAt, &job.Status, &job.JobType, &job.Prompt, &job.Model); err != nil {
-				continue
-			}
-			job.Result = ""
-		}
-		job.CreatedAt, _ = time.Parse(time.RFC3339Nano, createdAt)
-		if fulfilledAt.Valid {
-			t, _ := time.Parse(time.RFC3339Nano, fulfilledAt.String)
-			job.FulfilledAt = &t
-		}
-		jobs = append(jobs, job)
+	query := db.Order("created_at DESC").Limit(limit)
+	if !withResult {
+		query = query.Omit("result")
+	}
+
+	err := query.Find(&jobs).Error
+	if err != nil {
+		return nil, err
 	}
 
 	return jobs, nil
@@ -270,50 +215,15 @@ func StartJobWorker() {
 func processPendingJobs() {
 	// Fetch pending jobs from the database
 	db := GetDB()
-	rows, err := db.Query(`SELECT id, created_at, fulfilled_at, status, job_type, prompt, result, model, images_path FROM jobs WHERE status = ?`, JobPending)
+	var jobs []Job
+	err := db.Where("status = ?", JobPending).Find(&jobs).Error
 	if err != nil {
 		log.Printf("Error querying pending jobs: %v", err)
 		return
 	}
-	defer rows.Close()
 
-	// Iterate through the rows and process each job
-	for rows.Next() {
-		var job Job
-		var createdAt string
-		var fulfilledAt sql.NullString
-		var imagesPathStr sql.NullString
-		var resultStr sql.NullString // <-- Add this line
-
-		// Scan all fields
-		if err := rows.Scan(&job.ID, &createdAt, &fulfilledAt, &job.Status, &job.JobType, &job.Prompt, &resultStr, &job.Model, &imagesPathStr); err != nil {
-			log.Printf("Error scanning job row: %v", err)
-			continue
-		}
-		// Assign result if not null
-		if resultStr.Valid {
-			job.Result = resultStr.String
-		} else {
-			job.Result = ""
-		}
-		// Parse createdAt
-		t, err := time.Parse(time.RFC3339Nano, createdAt)
-		if err == nil {
-			job.CreatedAt = t
-		}
-		// Parse fulfilledAt if present
-		if fulfilledAt.Valid {
-			ft, err := time.Parse(time.RFC3339Nano, fulfilledAt.String)
-			if err == nil {
-				job.FulfilledAt = &ft
-			}
-		}
-
-		// Parse imagesPath if present
-		if imagesPathStr.Valid && imagesPathStr.String != "" {
-			_ = json.Unmarshal([]byte(imagesPathStr.String), &job.ImagesPath)
-		}
-
+	// Iterate through the jobs and process each one
+	for _, job := range jobs {
 		log.Printf("Processing job: ID=%s, Type=%s, Model=%s", job.ID, job.JobType, job.Model)
 
 		// Update job status to running
@@ -346,12 +256,12 @@ func processPendingJobs() {
 				}
 			}
 		case JobTypeOCRExtract: // Handle MultiModal Extraction jobs
-			// var req MultiModalExtractionRequest
 			url := GetOllamaURL()
+			imagesPath := job.GetImagesPathSlice()
 
 			// Read the file bytes from the path
-			if len(job.ImagesPath) > 0 {
-				filePath := job.ImagesPath[0]
+			if len(imagesPath) > 0 {
+				filePath := imagesPath[0]
 				fileBytes, err := os.ReadFile(filePath)
 				if err != nil {
 					result = err.Error()
