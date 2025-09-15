@@ -34,3 +34,7 @@ go.work.sum
 
 # Data directory
 /data
+
+# Claude Code files
+.claude/
+CLAUDE.md
