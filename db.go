@@ -18,14 +18,24 @@ var (
 func GetDB() *gorm.DB {
 	once.Do(func() {
 		var err error
-		dbPath := os.Getenv("SQLITE_DB_PATH")
+
+		// Get database path from environment
+		dbPath := os.Getenv("DATABASE_PATH")
 		if dbPath == "" {
-			dbPath = "jobs.db"
+			dbPath = "data" // default
 		}
 
+		// Ensure database directory exists
+		if err := os.MkdirAll(dbPath, 0755); err != nil {
+			log.Fatalf("Failed to create database directory: %v", err)
+		}
+
+		// Construct full database file path
+		dbFile := dbPath + "/jobs.db"
+
 		// Configure GORM with SQLite
-		db, err = gorm.Open(sqlite.Open(dbPath+"?_busy_timeout=10000&_journal_mode=WAL"), &gorm.Config{
-			Logger: logger.Default.LogMode(logger.Silent), // Set to logger.Info for debugging
+		db, err = gorm.Open(sqlite.Open(dbFile+"?_busy_timeout=10000&_journal_mode=WAL"), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Silent),
 		})
 		if err != nil {
 			log.Fatalf("Failed to open DB: %v", err)
