@@ -57,7 +57,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            /opt/deploy/deploy-service.sh zllm prod prod-${{ github.sha }}
+            /opt/deploy/deploy-service.sh zllm prod prod-$(echo ${{ github.sha }} | cut -c1-7)
 
       - name: Health check
         uses: appleboy/ssh-action@v1.0.0
