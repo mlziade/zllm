@@ -28,7 +28,7 @@ The API uses role-based JWT authentication to secure endpoints.
 3.  Use the token for subsequent requests:
 
     ````json
-    GET /llm/model/list
+    GET /models/
     Authorization: Bearer eyJhbGciOiJIUzI1...
     ````
 
@@ -42,7 +42,7 @@ API keys should be configured in the `.env` file, refer to the [example env](../
 ### Protected Endpoints
 
 *   All endpoints except `/auth` require a valid JWT token
-*   Admin operations (like `/llm/model/add`, `/llm/model/delete`, `/job/list`) require a token with admin role
+*   Admin operations (like `/models/add`, `DELETE /models/:model`, `GET /jobs/`, `DELETE /jobs/`) require a token with admin role
 
 ---
 
@@ -147,7 +147,7 @@ Response:
 - **Insufficient memory**: Returns HTTP 500 with `{"error": "model requires more system memory"}`
 - **Other errors**: Returns HTTP 500 with error message
 
-#### **POST /llm/generate/streaming**
+#### **POST /llm/generate/stream**
 
 Generates text from a prompt with streaming response.
 
@@ -242,7 +242,7 @@ Response:
 - **Insufficient memory**: Returns HTTP 500 with `{"error": "model requires more system memory"}`
 - **Other errors**: Returns HTTP 500 with error message
 
-#### **POST /llm/chat/streaming**
+#### **POST /llm/chat/stream**
 
 Generates a chat response with streaming output.
 
@@ -305,67 +305,12 @@ Response: A stream of JSON objects with partial responses.
 {"model": "gemma3:1b", "created_at": "2025-05-11T03:35:51.9490465Z", "response": "", "done": true, "done_reason": "stop", "total_duration": 73945015500, "load_duration": 4091883200, "prompt_eval_count": 25, "prompt_eval_duration": 361034000, "eval_count": 1604, "eval_duration": 69489587500}
 ````
 
-#### **POST /llm/multimodal/extract/image**
-
-Extracts text from an image using multimodal LLMs.
-
-Request:
-- Multipart form data with a file field named "file"
-- Accepts .png, .jpg, and .jpeg image formats 
-- Required "model" query parameter (supported: "gemma3:4b", "llava:7b", "minicpm-v:8b")
-- Requires JWT authentication header
-
-Example:
-```curl
-curl -X POST http://localhost:3000/llm/multimodal/extract/image?model=gemma3:4b \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1..." \
-  -F "file=@/path/to/your/image.jpg"
-````
-
-Response:
-
-````json
-{
-  "original_text": "Extracted text from the image appears here.",
-  "file_processed": "image.jpg",
-  "model": "gemma3:4b"
-}
-````
-
-Error Response (Unsupported Model):
-
-````json
-{
-  "error": "Unsupported model. Use one of the supported multimodal models.",
-  "supported_models": ["gemma3:4b", "llava:7b", "minicpm-v:8b"]
-}
-````
-
-Error Response (Unsupported File Type):
-
-````json
-{
-  "error": "Unsupported file type. Only .png, .jpg, and .jpeg images are supported"
-}
-````
-
-Note: If the LLM response cannot be parsed as structured JSON, you'll receive:
-
-````json
-{
-  "warning": "Could not parse structured data from LLM response",
-  "raw_response": "LLM's raw text response",
-  "file_processed": "image.jpg",
-  "model": "gemma3:4b"
-}
-````
-
 ---
 
 
-### LLM Models Endpoints
+### Model Management Endpoints
 
-#### **POST /llm/model/add**
+#### **POST /models/add**
 
 Add (pull) a model from the Ollama library to the local instance. Requires admin role.
 
@@ -373,7 +318,7 @@ Request:
 
 ````json
 {
-  "model": "gemma3:1b"
+  "model": "tinyllama:1.1b"
 }
 ````
 
@@ -393,16 +338,15 @@ Response (error):
 }
 ````
 
-#### **DELETE /llm/model/delete**
+#### **DELETE /models/:model**
 
 Delete a model from the local Ollama instance. Requires admin role.
 
-Request:
+Example:
 
-````json
-{
-  "model": "gemma3:1b"
-}
+````
+DELETE /models/tinyllama:1.1b
+Authorization: Bearer eyJhbGciOiJIUzI1...
 ````
 
 Response (success):
@@ -422,7 +366,7 @@ Response (error):
 }
 ````
 
-#### **GET /llm/model/list**
+#### **GET /models/**
 
 List all models available locally on Ollama.
 
@@ -431,16 +375,17 @@ Response:
 ````json
 {
   "models": [
-    "gemma3:1b",
-    "llava:7b",
-    "minicpm-v:8b"
+    "tinyllama:1.1b",
+    "granite4:micro",
+    "qwen3:0.6b",
+    "gemma3:4b"
   ]
 }
 ````
 
 ### Job Endpoints
 
-#### **POST /job/generate**
+#### **POST /jobs/generate**
 
 Create an asynchronous job to generate a response.
 
@@ -448,7 +393,7 @@ Request:
 
 ````json
 {
-  "model": "llama2:7b",
+  "model": "tinyllama:1.1b",
   "prompt": "Explain quantum computing in simple terms",
   "options": {
     "temperature": 0.7,
@@ -461,29 +406,36 @@ Response:
 
 ````json
 {
-  "job_id": "job-123",
+  "job_id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
   "status": "pending"
 }
 ````
 
-#### **POST /job/multimodal/extract/image**
+#### **POST /jobs/multimodal_extraction**
 
-Create an asynchronous job to extract text from an image.
+Create an asynchronous job to extract text from an image using multimodal models.
 
 Request:
 - Multipart form data with a file field named "file"
-- Required "model" query parameter
+- Required "model" query parameter (supported: "gemma3:4b", "llava:7b", "minicpm-v:8b")
+
+Example:
+````
+curl -X POST http://localhost:3000/jobs/multimodal_extraction?model=gemma3:4b \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1..." \
+  -F "file=@/path/to/your/image.jpg"
+````
 
 Response:
 
 ````json
 {
-  "job_id": "job-456",
+  "job_id": "a7d2c3e9-b12f-489c-9876-12abc34def56",
   "status": "pending"
 }
 ````
 
-#### **GET /job/:id/status**
+#### **GET /jobs/:id/status**
 
 Check asynchronous job status.
 
@@ -499,59 +451,7 @@ Response:
 }
 ````
 
-#### **GET /job/:id**
-
-Retrieve asynchronous job and its result, if available.
-
-Query parameter:
-- `result=true` to include the result (if retrievable)
-
-Response (fulfilled, with result):
-
-````json
-{
-  "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
-  "status": "fulfilled",
-  "created_at": "2025-05-11T20:30:44.0283394-03:00",
-  "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
-  "job_type": "generate",
-  "prompt": "Who is the president of Brazil?",
-  "model": "gemma3:1b",
-  "result": "{\"model\":\"gemma3:1b\",\"response\":\"As of today, November 2, 2023, the President of Brazil is Luiz Inácio Lula da Silva, often referred to as Lula. \\n\\nIt’s always a good idea to double-check with a reliable news source for the very latest updates!\"}"
-}
-````
-
-Response (fulfilled, without result):
-
-````json
-{
-  "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
-  "status": "fulfilled",
-  "created_at": "2025-05-11T20:30:44.0283394-03:00",
-  "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
-  "job_type": "generate",
-  "prompt": "Who is the president of Brazil?",
-  "model": "gemma3:1b"
-}
-````
-
-Response (result expired):
-
-````json
-{
-  "error": "Result expired"
-}
-````
-
-Response (job not found):
-
-````json
-{
-  "error": "Job not found"
-}
-````
-
-#### **GET /job/:id/result**
+#### **GET /jobs/:id/result**
 
 Retrieve asynchronous job result.
 
@@ -559,8 +459,11 @@ Response (fulfilled):
 
 ````json
 {
-  "job_id": "job-123",
-  "result": { /* result object, e.g. LLM output or OCR result */ }
+  "job_id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
+  "result": {
+    "model": "tinyllama:1.1b",
+    "response": "Quantum computing is..."
+  }
 }
 ````
 
@@ -581,48 +484,59 @@ Response (expired):
 }
 ````
 
-#### **GET /job/list** *(Admin only)*
+#### **GET /jobs/** *(Admin only)*
 
-List the last previous jobs.
+List recent jobs.
 
 Query parameters:
 - `limit` (optional): number of jobs to return (default 10)
-- `result` (optional, boolean): whether to include job results in the response (default: false)
+- `with_result` (optional, boolean): whether to include job results in the response (default: false)
 
-If `result=true`, each job object will include a `result` field with the job's result (if available). If `result=false` (default), the `result` field is omitted.
-
-Example response (`result=true`):
+Example response (`with_result=true`):
 
 ````json
 {
-    "jobs": [
-        {
-            "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
-            "created_at": "2025-05-11T20:30:44.0283394-03:00",
-            "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
-            "status": "fulfilled",
-            "job_type": "generate",
-            "input": "{\"model\":\"gemma3:1b\",\"prompt\":\"Who is the president of Brazil?\"}",
-            "result": "{\"model\":\"gemma3:1b\",\"response\":\"As of today, November 2, 2023, the President of Brazil is Luiz Inácio Lula da Silva, often referred to as Lula. \\n\\nIt’s always a good idea to double-check with a reliable news source for the very latest updates!\"}"
-        }
-    ]
+  "jobs": [
+    {
+      "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
+      "created_at": "2025-05-11T20:30:44.0283394-03:00",
+      "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
+      "status": "fulfilled",
+      "job_type": "generate",
+      "input": "{\"model\":\"tinyllama:1.1b\",\"prompt\":\"Who is the president of Brazil?\"}",
+      "result": "{\"model\":\"tinyllama:1.1b\",\"response\":\"As of my knowledge cutoff...\"}"
+    }
+  ]
 }
 ````
 
-Example response (`result=false`):
+Example response (`with_result=false`):
 
 ````json
 {
-    "jobs": [
-        {
-            "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
-            "created_at": "2025-05-11T20:30:44.0283394-03:00",
-            "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
-            "status": "fulfilled",
-            "job_type": "generate",
-            "input": "{\"model\":\"gemma3:1b\",\"prompt\":\"Who is the president of Brazil?\"}"
-        }
-    ]
+  "jobs": [
+    {
+      "id": "5e0b39c9-a62c-487b-8776-94bfe05f5c54",
+      "created_at": "2025-05-11T20:30:44.0283394-03:00",
+      "fulfilled_at": "2025-05-11T20:30:49.1500282-03:00",
+      "status": "fulfilled",
+      "job_type": "generate",
+      "input": "{\"model\":\"tinyllama:1.1b\",\"prompt\":\"Who is the president of Brazil?\"}"
+    }
+  ]
+}
+````
+
+#### **DELETE /jobs/** *(Admin only)*
+
+Delete all jobs from the database.
+
+Response:
+
+````json
+{
+  "status": "success",
+  "message": "All jobs deleted"
 }
 ````
 

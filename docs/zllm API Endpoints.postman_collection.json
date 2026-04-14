@@ -172,14 +172,13 @@
 									}
 								],
 								"url": {
-									"raw": "{{SERVER_URL}}/llm/model/list",
+									"raw": "{{SERVER_URL}}/models/",
 									"host": [
 										"{{SERVER_URL}}"
 									],
 									"path": [
-										"llm",
-										"model",
-										"list"
+										"models",
+										""
 									]
 								}
 							},
@@ -195,14 +194,13 @@
 											}
 										],
 										"url": {
-											"raw": "{{SERVER_URL}}/llm/model/list",
+											"raw": "{{SERVER_URL}}/models/",
 											"host": [
 												"{{SERVER_URL}}"
 											],
 											"path": [
-												"llm",
-												"model",
-												"list"
+												"models",
+												""
 											]
 										}
 									},
@@ -248,24 +246,14 @@
 										"value": "application/json"
 									}
 								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\r\n    \"model\": \"teste\"\r\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
 								"url": {
-									"raw": "{{SERVER_URL}}/llm/model/delete",
+									"raw": "{{SERVER_URL}}/models/tinyllama:1.1b",
 									"host": [
 										"{{SERVER_URL}}"
 									],
 									"path": [
-										"llm",
-										"model",
-										"delete"
+										"models",
+										"tinyllama:1.1b"
 									]
 								}
 							},
@@ -280,24 +268,14 @@
 												"value": "application/json"
 											}
 										],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"model\": \"tinyllama:1.1b\"\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
 										"url": {
-											"raw": "{{SERVER_URL}}/llm/model/delete",
+											"raw": "{{SERVER_URL}}/models/tinyllama:1.1b",
 											"host": [
 												"{{SERVER_URL}}"
 											],
 											"path": [
-												"llm",
-												"model",
-												"delete"
+												"models",
+												"tinyllama:1.1b"
 											]
 										}
 									},
@@ -331,24 +309,14 @@
 												"value": "application/json"
 											}
 										],
-										"body": {
-											"mode": "raw",
-											"raw": "{\r\n    \"model\": \"teste\"\r\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
 										"url": {
-											"raw": "{{SERVER_URL}}/llm/model/delete",
+											"raw": "{{SERVER_URL}}/models/teste",
 											"host": [
 												"{{SERVER_URL}}"
 											],
 											"path": [
-												"llm",
-												"model",
-												"delete"
+												"models",
+												"teste"
 											]
 										}
 									},
@@ -404,13 +372,12 @@
 									}
 								},
 								"url": {
-									"raw": "{{SERVER_URL}}/llm/model/add",
+									"raw": "{{SERVER_URL}}/models/add",
 									"host": [
 										"{{SERVER_URL}}"
 									],
 									"path": [
-										"llm",
-										"model",
+										"models",
 										"add"
 									]
 								}
@@ -436,13 +403,12 @@
 											}
 										},
 										"url": {
-											"raw": "{{SERVER_URL}}/llm/model/add",
+											"raw": "{{SERVER_URL}}/models/add",
 											"host": [
 												"{{SERVER_URL}}"
 											],
 											"path": [
-												"llm",
-												"model",
+												"models",
 												"add"
 											]
 										}
@@ -487,13 +453,12 @@
 											}
 										},
 										"url": {
-											"raw": "{{SERVER_URL}}/llm/model/add",
+											"raw": "{{SERVER_URL}}/models/add",
 											"host": [
 												"{{SERVER_URL}}"
 											],
 											"path": [
-												"llm",
-												"model",
+												"models",
 												"add"
 											]
 										}
@@ -695,14 +660,14 @@
 							}
 						},
 						"url": {
-							"raw": "{{SERVER_URL}}/llm/generate/streaming",
+							"raw": "{{SERVER_URL}}/llm/generate/stream",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
 								"llm",
 								"generate",
-								"streaming"
+								"stream"
 							]
 						}
 					},
@@ -727,14 +692,14 @@
 									}
 								},
 								"url": {
-									"raw": "{{SERVER_URL}}/llm/generate/streaming",
+									"raw": "{{SERVER_URL}}/llm/generate/stream",
 									"host": [
 										"{{SERVER_URL}}"
 									],
 									"path": [
 										"llm",
 										"generate",
-										"streaming"
+										"stream"
 									]
 								}
 							},
@@ -799,15 +764,13 @@
 							]
 						},
 						"url": {
-							"raw": "{{SERVER_URL}}/llm/multimodal/extract/image?model=gemma3:4b",
+							"raw": "{{SERVER_URL}}/jobs/multimodal_extraction?model=gemma3:4b",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
-								"llm",
-								"multimodal",
-								"extract",
-								"image"
+								"jobs",
+								"multimodal_extraction"
 							],
 							"query": [
 								{
@@ -840,7 +803,7 @@
 									]
 								},
 								"url": {
-									"raw": "{{SERVER_URL}}/llm/multimodal/extract/image?model=gemma3:4b",
+									"raw": "{{SERVER_URL}}/jobs/multimodal_extraction?model=gemma3:4b",
 									"host": [
 										"{{SERVER_URL}}"
 									],
@@ -901,13 +864,13 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{SERVER_URL}}/job/list?limit=5&result=False",
+							"raw": "{{SERVER_URL}}/jobs/?limit=5&with_result=False",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
-								"job",
-								"list"
+								"jobs",
+								""
 							],
 							"query": [
 								{
@@ -915,7 +878,7 @@
 									"value": "5"
 								},
 								{
-									"key": "result",
+									"key": "with_result",
 									"value": "False"
 								}
 							]
@@ -929,7 +892,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{SERVER_URL}}/job/list?limit=5&result=True",
+									"raw": "{{SERVER_URL}}/jobs/?limit=5&with_result=True",
 									"host": [
 										"{{SERVER_URL}}"
 									],
@@ -943,7 +906,7 @@
 											"value": "5"
 										},
 										{
-											"key": "result",
+											"key": "with_result",
 											"value": "True"
 										}
 									]
@@ -975,7 +938,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{SERVER_URL}}/job/list?limit=5&result=False",
+									"raw": "{{SERVER_URL}}/jobs/?limit=5&with_result=False",
 									"host": [
 										"{{SERVER_URL}}"
 									],
@@ -989,7 +952,7 @@
 											"value": "5"
 										},
 										{
-											"key": "result",
+											"key": "with_result",
 											"value": "False"
 										}
 									]
@@ -1047,12 +1010,12 @@
 							}
 						},
 						"url": {
-							"raw": "{{SERVER_URL}}/job/generate",
+							"raw": "{{SERVER_URL}}/jobs/generate",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
-								"job",
+								"jobs",
 								"generate"
 							]
 						},
@@ -1079,7 +1042,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{SERVER_URL}}/job/generate",
+									"raw": "{{SERVER_URL}}/jobs/generate",
 									"host": [
 										"{{SERVER_URL}}"
 									],
@@ -1127,12 +1090,12 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{SERVER_URL}}/job/:job_id/status",
+							"raw": "{{SERVER_URL}}/jobs/:job_id/status",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
-								"job",
+								"jobs",
 								":job_id",
 								"status"
 							],
@@ -1163,17 +1126,17 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{SERVER_URL}}/job/:job_id?result=true",
+							"raw": "{{SERVER_URL}}/jobs/:job_id?result=true",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
-								"job",
+								"jobs",
 								":job_id"
 							],
 							"query": [
 								{
-									"key": "result",
+									"key": "with_result",
 									"value": "true"
 								}
 							],
@@ -1193,7 +1156,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{SERVER_URL}}/job/:job_id/result",
+									"raw": "{{SERVER_URL}}/jobs/:job_id/result",
 									"host": [
 										"{{SERVER_URL}}"
 									],
@@ -1236,7 +1199,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{SERVER_URL}}/job/:job_id/result",
+									"raw": "{{SERVER_URL}}/jobs/:job_id/result",
 									"host": [
 										"{{SERVER_URL}}"
 									],
@@ -1279,7 +1242,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{SERVER_URL}}/job/:job_id?result=true",
+									"raw": "{{SERVER_URL}}/jobs/:job_id?result=true",
 									"host": [
 										"{{SERVER_URL}}"
 									],
@@ -1289,7 +1252,7 @@
 									],
 									"query": [
 										{
-											"key": "result",
+											"key": "with_result",
 											"value": "true"
 										}
 									],
@@ -1349,15 +1312,13 @@
 							]
 						},
 						"url": {
-							"raw": "{{SERVER_URL}}/job/multimodal/extract/image?model=gemma3:4b",
+							"raw": "{{SERVER_URL}}/jobs/multimodal_extraction?model=gemma3:4b",
 							"host": [
 								"{{SERVER_URL}}"
 							],
 							"path": [
-								"job",
-								"multimodal",
-								"extract",
-								"image"
+								"jobs",
+								"multimodal_extraction"
 							],
 							"query": [
 								{
@@ -1385,7 +1346,7 @@
 									]
 								},
 								"url": {
-									"raw": "{{SERVER_URL}}/job/multimodal/extract/image?model=gemma3:4b",
+									"raw": "{{SERVER_URL}}/jobs/multimodal_extraction?model=gemma3:4b",
 									"host": [
 										"{{SERVER_URL}}"
 									],
