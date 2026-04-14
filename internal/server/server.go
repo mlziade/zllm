@@ -53,6 +53,13 @@ func (s *Server) Start(addr string) error {
 
 // setupRoutes configures all the routes
 func (s *Server) setupRoutes() {
+	// Health check endpoint (public, no auth required)
+	s.app.Get("/api/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status": "healthy",
+		})
+	})
+
 	// Auth endpoints
 	s.app.Post("/auth", handlers.HandleAuth(s.config.AppConfig))
 
